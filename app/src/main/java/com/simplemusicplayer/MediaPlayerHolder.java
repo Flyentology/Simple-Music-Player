@@ -47,6 +47,7 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         //creating an instance of nested receiver
         NotificationReceiver notificationReceiver = new NotificationReceiver();
         IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
         intentFilter.addAction("PLAY_NEXT");
         intentFilter.addAction("PAUSE");
         intentFilter.addAction("PLAY_PREVIOUS");
@@ -219,20 +220,27 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
 
             try {
                 String action = intent.getAction();
-                if (action.equals("PLAY_NEXT")) {
-                    nextSong();
-                    loadMedia();
-                } else if (action.equals("PAUSE")) {
-                    if (isPlaying()) {
+                switch (action) {
+                    case "PLAY_NEXT":
+                        nextSong();
+                        loadMedia();
+                        break;
+                    case "PAUSE":
+                        if (isPlaying()) {
+                            pause();
+                            mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Resume");
+                        } else {
+                            start();
+                            mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Pause");
+                        }
+                        break;
+                    case "PLAY_PREVIOUS":
+                        previousSong();
+                        loadMedia();
+                        break;
+                    case AudioManager.ACTION_AUDIO_BECOMING_NOISY:
                         pause();
-                        mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Resume");
-                    } else {
-                        start();
-                        mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Pause");
-                    }
-                } else if (action.equals("PLAY_PREVIOUS")) {
-                    previousSong();
-                    loadMedia();
+                        break;
                 }
             } catch (Exception e) {
 

@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.media.session.MediaSession;
 import android.os.Build;
 import android.os.Bundle;
@@ -49,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
         mediaPlayerHolder = new MediaPlayerHolder(this, MainActivity.this);
 
         mediaSession = new MediaSession(this, "Playback");
-        //setSessionToken(mediaSession.getSessionToken());
 
         // runtime check for permission
         if (ContextCompat.checkSelfPermission(MainActivity.this,
@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
     }
 
     @Override
