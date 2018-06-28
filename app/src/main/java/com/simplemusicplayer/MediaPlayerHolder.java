@@ -10,6 +10,7 @@ import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.PowerManager;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
@@ -18,8 +19,9 @@ import android.widget.MediaController;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Random;
+
+import static android.os.PowerManager.PARTIAL_WAKE_LOCK;
 
 public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, MediaController.MediaPlayerControl {
 
@@ -31,16 +33,16 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
     private MediaController mediaController;
     private boolean playedOnce, shuffle = false;
     private List<Integer> previouslyPlayed;
-    private ListIterator previousSong;
     private MainActivity mainActivity;
+    private int index = 0;
 
     public MediaPlayerHolder(Context mContext, MainActivity mainActivity) {
         this.mContext = mContext.getApplicationContext();
         this.songsList = new ArrayList<>();
         this.previouslyPlayed = new ArrayList<>();
-        this.previousSong = previouslyPlayed.listIterator();
         this.mediaPlayer = new MediaPlayer();
         this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        this.mediaPlayer.setWakeMode(mContext, PowerManager.PARTIAL_WAKE_LOCK);
         this.mediaPlayer.setOnCompletionListener(this);
         this.mediaController = new MediaController(mContext);
         this.mainActivity = mainActivity;
@@ -54,6 +56,10 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         mContext.registerReceiver(notificationReceiver, intentFilter);
     }
 
+    public List<Integer> getPreviouslyPlayed() {
+        return previouslyPlayed;
+    }
+
     public MediaController getMediaController() {
         return mediaController;
     }
@@ -63,20 +69,18 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
     }
 
     public void setMediaController() {
-        //mediaController = new MediaController(mContext);
         mediaController.setPrevNextListeners(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //previouslyPlayed.add(songIterator);
                 nextSong();
-                loadMedia();
+                loadMedia(songsList.get(songIterator).getSongID());
 
             }
         }, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 previousSong();
-                loadMedia();
+                loadMedia(songsList.get(songIterator).getSongID());
             }
         });
         mediaController.setMediaPlayer(this);
@@ -91,6 +95,7 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
     }
 
     public int getSongIterator() {
+        index = previouslyPlayed.size() - 1;
         return songIterator;
     }
 
@@ -127,9 +132,9 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
 
 
     //Load song and start playback
-    public void loadMedia() {
+    public void loadMedia(long ID) {
         reset();
-        Uri uri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songsList.get(songIterator).getSongID());
+        Uri uri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, ID);
         try {
             mediaPlayer.setDataSource(mContext.getApplicationContext(), uri);
             mediaPlayer.prepare();
@@ -142,7 +147,7 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
             e1.printStackTrace();
         }
         playedOnce = true;
-        mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Pause");
+        mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Pause", isPlaying());
     }
 
     @Override
@@ -150,7 +155,7 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         //onCompletion is called on the beginning, condition won't allow it to play until someone choose song
         if (playedOnce) {
             nextSong();
-            loadMedia();
+            loadMedia(songsList.get(songIterator).getSongID());
         }
     }
 
@@ -223,20 +228,20 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
                 switch (action) {
                     case "PLAY_NEXT":
                         nextSong();
-                        loadMedia();
+                        loadMedia(songsList.get(songIterator).getSongID());
                         break;
                     case "PAUSE":
                         if (isPlaying()) {
                             pause();
-                            mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Resume");
+                            mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Resume", isPlaying());
                         } else {
                             start();
-                            mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Pause");
+                            mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Pause", isPlaying());
                         }
                         break;
                     case "PLAY_PREVIOUS":
                         previousSong();
-                        loadMedia();
+                        loadMedia(songsList.get(songIterator).getSongID());
                         break;
                     case AudioManager.ACTION_AUDIO_BECOMING_NOISY:
                         pause();
@@ -248,18 +253,19 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         }
     }
 
-    //TODO: Fix repeating of last eleement of list by iterator
     private void nextSong() {
         if (shuffle) {
-            if (previousSong.hasNext()) {
-                int index = previousSong.nextIndex();
+            if(index < 0){
+                index = 0;
+            }
+            if (index <= previouslyPlayed.size() - 2) {
+                index++;
                 songIterator = previouslyPlayed.get(index);
-                previousSong.next();
             } else {
                 Random r = new Random();
                 songIterator = r.nextInt(songsList.size());
                 previouslyPlayed.add(songIterator);
-                previousSong = previouslyPlayed.listIterator(previouslyPlayed.size());
+                index = previouslyPlayed.size() - 1;
             }
         } else {
             songIterator++;
@@ -268,15 +274,13 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
 
     private void previousSong() {
         if (shuffle) {
-            if (previousSong.hasPrevious()) {
-                int index = previousSong.previousIndex();
+            if (index > 0) {
+                index--;
                 songIterator = previouslyPlayed.get(index);
-                previousSong.previous();
             } else {
                 Random r = new Random();
                 songIterator = r.nextInt(songsList.size());
                 previouslyPlayed.add(0, songIterator);
-                previousSong = previouslyPlayed.listIterator(0);
             }
         } else if (songIterator >= 1) {
             songIterator--;
@@ -285,10 +289,8 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         }
     }
 
-    public void removeHistory(boolean isShuffled) {
-        if (!isShuffled) {
+    public void removeHistory() {
             previouslyPlayed.clear();
-            previousSong = previouslyPlayed.listIterator(0);
-        }
+            index = 0;
     }
 }

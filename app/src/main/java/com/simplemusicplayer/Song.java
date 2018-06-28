@@ -30,4 +30,10 @@ public class Song {
     public long getSongID() {
         return songID;
     }
+
+    @Override
+    public String toString() {
+        return songName + " " + artistName;
+    }
 }
+
