@@ -1,5 +1,7 @@
 package com.simplemusicplayer;
 
+import android.app.PendingIntent;
+import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -9,43 +11,63 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.session.MediaSession;
 import android.net.Uri;
-import android.os.PowerManager;
+import android.os.Binder;
+import android.os.IBinder;
 import android.provider.MediaStore;
+import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.MediaController;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 import static android.os.PowerManager.PARTIAL_WAKE_LOCK;
 
-public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, MediaController.MediaPlayerControl {
+public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompletionListener, Serializable {
 
-
-    private final Context mContext;
-    private List<Song> songsList;
+    private ArrayList<Song> songsList = new ArrayList<>();
     private MediaPlayer mediaPlayer;
     private int songIterator = 0;
     private MediaController mediaController;
     private boolean playedOnce, shuffle = false;
     private List<Integer> previouslyPlayed;
-    private MainActivity mainActivity;
     private int index = 0;
+    private MediaSession mediaSession;
+    private NotificationCompat.Builder mBuilder;
+    private IBinder mBinder = new LocalBinder();
 
-    public MediaPlayerHolder(Context mContext, MainActivity mainActivity) {
-        this.mContext = mContext.getApplicationContext();
-        this.songsList = new ArrayList<>();
+    /**
+     * Class used for the client Binder.  Because we know this service always
+     * runs in the same process as its clients, we don't need to deal with IPC.
+     */
+    public class LocalBinder extends Binder {
+        MediaPlayerHolder getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return MediaPlayerHolder.this;
+        }
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
         this.previouslyPlayed = new ArrayList<>();
         this.mediaPlayer = new MediaPlayer();
         this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        this.mediaPlayer.setWakeMode(mContext, PowerManager.PARTIAL_WAKE_LOCK);
+        this.mediaSession = new MediaSession(this, "Playback");
         this.mediaPlayer.setOnCompletionListener(this);
-        this.mediaController = new MediaController(mContext);
-        this.mainActivity = mainActivity;
+
+        fillSongList(0);
+        createNotification("3", "Pause", mediaPlayer.isPlaying());
+
         //creating an instance of nested receiver
         NotificationReceiver notificationReceiver = new NotificationReceiver();
         IntentFilter intentFilter = new IntentFilter();
@@ -53,8 +75,43 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         intentFilter.addAction("PLAY_NEXT");
         intentFilter.addAction("PAUSE");
         intentFilter.addAction("PLAY_PREVIOUS");
-        mContext.registerReceiver(notificationReceiver, intentFilter);
+        intentFilter.addAction("PLAY_SONG");
+        intentFilter.addAction("SHUFFLE");
+        intentFilter.addAction("SORT_TYPE");
+        getApplicationContext().registerReceiver(notificationReceiver, intentFilter);
+        return mBinder;
     }
+
+
+//    public MediaPlayerHolder() {
+//        this.previouslyPlayed = new ArrayList<>();
+//        this.mediaPlayer = new MediaPlayer();
+//        this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+//    }
+
+//    @Override
+//    public void onCreate() {
+//        this.previouslyPlayed = new ArrayList<>();
+//        this.mediaPlayer = new MediaPlayer();
+//        this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+//        this.mediaSession = new MediaSession(this, "Playback");
+//        this.mediaPlayer.setOnCompletionListener(this);
+//
+//        fillSongList(0);
+//        createNotification("3", "Pause", mediaPlayer.isPlaying());
+//
+//        //creating an instance of nested receiver
+//        NotificationReceiver notificationReceiver = new NotificationReceiver();
+//        IntentFilter intentFilter = new IntentFilter();
+//        intentFilter.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+//        intentFilter.addAction("PLAY_NEXT");
+//        intentFilter.addAction("PAUSE");
+//        intentFilter.addAction("PLAY_PREVIOUS");
+//        intentFilter.addAction("PLAY_SONG");
+//        intentFilter.addAction("SHUFFLE");
+//        intentFilter.addAction("SORT_TYPE");
+//        getApplicationContext().registerReceiver(notificationReceiver, intentFilter);
+//    }
 
     public List<Integer> getPreviouslyPlayed() {
         return previouslyPlayed;
@@ -68,23 +125,6 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         this.shuffle = shuffle;
     }
 
-    public void setMediaController() {
-        mediaController.setPrevNextListeners(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                nextSong();
-                loadMedia(songsList.get(songIterator).getSongID());
-
-            }
-        }, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                previousSong();
-                loadMedia(songsList.get(songIterator).getSongID());
-            }
-        });
-        mediaController.setMediaPlayer(this);
-    }
 
     public MediaPlayer getMediaPlayer() {
         return mediaPlayer;
@@ -103,10 +143,16 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         this.songIterator = songIterator;
     }
 
-    public void fillSongList() {
-        ContentResolver contentResolver = mContext.getContentResolver();
+    public void fillSongList(int sortOrder) {
+        ContentResolver contentResolver = getApplicationContext().getContentResolver();
         Uri uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI; //uri is basically URL, so points to a place in the phone where media is stored
-        Cursor cursor = contentResolver.query(uri, null, null, null, null); //query for audio files on the phone
+        Cursor cursor;
+        //choose sort order
+        if (sortOrder == 0) {
+            cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.DATE_ADDED + " COLLATE NOCASE ASC"); //query for audio files on the phone
+        } else {
+            cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.TITLE + " COLLATE NOCASE ASC"); //query for audio files on the phone
+        }
         if (cursor == null) {
             // query failed
             Log.d("Cursors ", "query failed");
@@ -126,28 +172,32 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
                 String albumName = cursor.getString(albumColumn);
                 songsList.add(new Song(thisTitle, artistName, albumName, id));
             } while (cursor.moveToNext());
+            Intent intent = new Intent("SONG_LIST");
+            intent.putParcelableArrayListExtra("songsList", songsList);
+            sendBroadcast(intent);
             cursor.close(); //cursors should be freed up after use
         }
     }
-
 
     //Load song and start playback
     public void loadMedia(long ID) {
         reset();
         Uri uri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, ID);
         try {
-            mediaPlayer.setDataSource(mContext.getApplicationContext(), uri);
+            mediaPlayer.setDataSource(getApplicationContext(), uri);
             mediaPlayer.prepare();
-            if (isPlaying()) {
-                pause();
+            if (mediaPlayer.isPlaying()) {
+                mediaPlayer.pause();
             } else {
-                start();
+                mediaPlayer.start();
             }
         } catch (IOException e1) {
             e1.printStackTrace();
         }
         playedOnce = true;
-        mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Pause", isPlaying());
+//        Intent showMediaController = new Intent("MEDIA_CONTROLLER");
+//        sendBroadcast(showMediaController);
+        updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
     }
 
     @Override
@@ -159,65 +209,56 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         }
     }
 
-    @Override
-    public void start() {
-        mediaPlayer.start();
-    }
-
-    @Override
-    public void pause() {
-        mediaPlayer.pause();
-    }
-
-    @Override
-    public int getDuration() {
-        return mediaPlayer.getDuration();
-    }
-
-    @Override
-    public int getCurrentPosition() {
-        return mediaPlayer.getCurrentPosition();
-    }
-
-    @Override
-    public void seekTo(int pos) {
-        mediaPlayer.seekTo(pos);
-    }
-
-    @Override
-    public boolean isPlaying() {
-        return mediaPlayer.isPlaying();
-    }
-
-    @Override
-    public int getBufferPercentage() {
-        return 0;
-    }
-
-    @Override
-    public boolean canPause() {
-        return true;
-    }
-
-    @Override
-    public boolean canSeekBackward() {
-        return true;
-    }
-
-    @Override
-    public boolean canSeekForward() {
-        return true;
-    }
-
-    @Override
-    public int getAudioSessionId() {
-        return 0;
-    }
-
-    public void reset() {
+    private void reset() {
         mediaPlayer.reset();
     }
 
+    public void createNotification(String songName, String currentState, boolean isPlaying) {
+
+        // preparing to add notifications
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Intent playNextIntent = new Intent();
+        playNextIntent.setAction("PLAY_NEXT");
+        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, 1, playNextIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Intent pauseIntent = new Intent();
+        pauseIntent.setAction("PAUSE");
+        PendingIntent pausePendingIntent = PendingIntent.getBroadcast(this, 2, pauseIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Intent playPreviousIntent = new Intent();
+        playPreviousIntent.setAction("PLAY_PREVIOUS");
+        PendingIntent prevPendingIntent = PendingIntent.getBroadcast(this, 3, playPreviousIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        mBuilder = new NotificationCompat.Builder(this, "MusicID")
+                .setSmallIcon(R.drawable.ic_launcher_background) //notification icon
+                .setContentTitle("Simple Music Player")
+                .setContentText("Currently playing: " + songName)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setWhen(0)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) //visible on locked screen
+                .setOngoing(isPlaying) //user can't remove notification
+                .addAction(R.drawable.ic_previous, "Previous", prevPendingIntent) // #0
+                .addAction(R.drawable.ic_pause, currentState, pausePendingIntent)  // #1
+                .addAction(R.drawable.ic_next, "Next", nextPendingIntent)// #2
+                .setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle().setMediaSession(MediaSessionCompat.Token.fromToken(mediaSession.getSessionToken())))
+                .setContentIntent(pendingIntent); //on click go to app intent
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        startForeground(1337, mBuilder.build());
+        // notificationId is a unique int for each notification that you must define
+    }
+
+    private void updateNotification(String songName) {
+
+        mBuilder.setContentText("Currently playing: " + songName);
+        mBuilder.setOngoing(mediaPlayer.isPlaying());
+        NotificationManagerCompat mNotificationManager = NotificationManagerCompat.from(this);
+        mNotificationManager.notify(1337, mBuilder.build());
+    }
 
     public class NotificationReceiver extends BroadcastReceiver {
         @Override
@@ -231,12 +272,12 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
                         loadMedia(songsList.get(songIterator).getSongID());
                         break;
                     case "PAUSE":
-                        if (isPlaying()) {
-                            pause();
-                            mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Resume", isPlaying());
+                        if (mediaPlayer.isPlaying()) {
+                            mediaPlayer.pause();
+                            updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
                         } else {
-                            start();
-                            mainActivity.createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), "Pause", isPlaying());
+                            mediaPlayer.start();
+                            updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
                         }
                         break;
                     case "PLAY_PREVIOUS":
@@ -244,8 +285,27 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
                         loadMedia(songsList.get(songIterator).getSongID());
                         break;
                     case AudioManager.ACTION_AUDIO_BECOMING_NOISY:
-                        pause();
+                        mediaPlayer.start();
                         break;
+                    case "PLAY_SONG":
+                        Log.d("ddd", "here");
+                        songIterator = intent.getIntExtra("ITERATOR", -1);
+                        loadMedia(intent.getLongExtra("ID", -1));
+                        previouslyPlayed.add(songIterator);
+                        break;
+                    case "SHUFFLE":
+                        setShuffle(intent.getBooleanExtra("ShuffleBoolean", false));
+                        randomSong();
+                        removeHistory();
+                    case "SORT_TYPE":
+                        songsList.clear();
+                        if(intent.getIntExtra("SORT", -1) == 0){
+                            fillSongList(0);
+                        } else if(intent.getIntExtra("SORT", -1) == 1){
+                            fillSongList(1);
+                        }
+                        break;
+
                 }
             } catch (Exception e) {
 
@@ -253,9 +313,9 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         }
     }
 
-    private void nextSong() {
+    void nextSong() {
         if (shuffle) {
-            if(index < 0){
+            if (index < 0) {
                 index = 0;
             }
             if (index <= previouslyPlayed.size() - 2) {
@@ -272,7 +332,7 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
         }
     }
 
-    private void previousSong() {
+    void previousSong() {
         if (shuffle) {
             if (index > 0) {
                 index--;
@@ -290,7 +350,16 @@ public class MediaPlayerHolder implements MediaPlayer.OnCompletionListener, Medi
     }
 
     public void removeHistory() {
-            previouslyPlayed.clear();
-            index = 0;
+        previouslyPlayed.clear();
+        index = 0;
+    }
+
+
+    public void randomSong() {
+        Random r = new Random();
+        songIterator = r.nextInt(songsList.size());
+        previouslyPlayed.add(songIterator);
+        long id = songsList.get(songIterator).getSongID();
+        loadMedia(id);
     }
 }

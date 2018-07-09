@@ -1,6 +1,11 @@
 package com.simplemusicplayer;
 
-public class Song {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import java.io.Serializable;
+
+public class Song implements Parcelable {
 
     private String songName;
     private String artistName;
@@ -14,6 +19,25 @@ public class Song {
         this.songID = songID;
     }
 
+
+    protected Song(Parcel in) {
+        songName = in.readString();
+        artistName = in.readString();
+        album = in.readString();
+        songID = in.readLong();
+    }
+
+    public static final Creator<Song> CREATOR = new Creator<Song>() {
+        @Override
+        public Song createFromParcel(Parcel in) {
+            return new Song(in);
+        }
+
+        @Override
+        public Song[] newArray(int size) {
+            return new Song[size];
+        }
+    };
 
     public String getSongName() {
         return songName;
@@ -34,6 +58,19 @@ public class Song {
     @Override
     public String toString() {
         return songName + " " + artistName;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(songName);
+        dest.writeString(artistName);
+        dest.writeString(album);
+        dest.writeLong(songID);
     }
 }
 

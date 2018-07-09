@@ -5,41 +5,58 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.SearchManager;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.media.session.MediaSession;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.InputType;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.MediaController;
 import android.widget.SearchView;
 import android.widget.Toast;
+
+import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 
-public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener {
+public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener, MediaController.MediaPlayerControl {
 
-
-    private MediaPlayerHolder mediaPlayerHolder;
     private final int MY_PERMISSIONS_REQUEST = 1;
     private ListView songsList;
     private boolean playShuffle = false;
-    private MediaSession mediaSession;
     private ArrayAdapter arrayAdapter;
     private ArrayList<Song> songsListView = new ArrayList<>();
+    private ArrayList<Song> baseSongList = new ArrayList<>();
+    private boolean mBound = false;
+    MediaPlayerHolder mediaPlayerHolder;
+    private MediaController mediaController;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,11 +64,10 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         setContentView(R.layout.activity_main);
 
         Toolbar myToolbar = findViewById(R.id.my_toolbar);
-        //Toolbar quickMenu = findViewById(R.id.quickMenu);
         setSupportActionBar(myToolbar);
-        getSupportActionBar().setDisplayShowTitleEnabled(false);
+        //getSupportActionBar().setDisplayShowTitleEnabled(false);
 
-        Toolbar quickMenu = findViewById(R.id.quickMenu);
+        mediaController = new MediaController(this);
 
         ListView mainMenu = findViewById(R.id.mainMenu);
         ArrayList<String> menuList = new ArrayList<>();
@@ -64,8 +80,15 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         songsList = findViewById(R.id.songsList);
         songsList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 
-        mediaPlayerHolder = new MediaPlayerHolder(this, MainActivity.this);
-        mediaSession = new MediaSession(this, "Playback");
+        /*
+        Registering receiver to receive songsList
+         */
+        receiveFromService receive = new receiveFromService();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("SONG_LIST");
+        intentFilter.addAction("MEDIA_CONTROLLER");
+        intentFilter.addAction("MEDIA_CONTROLLER");
+        getApplicationContext().registerReceiver(receive, intentFilter);
 
         // runtime check for permission
         if (ContextCompat.checkSelfPermission(MainActivity.this,
@@ -80,10 +103,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
             }
         } else {
-            mediaPlayerHolder.fillSongList();
-            for (Song song : mediaPlayerHolder.getSongsList()) {
-                songsListView.add(song);
-            }
+            //startService(new Intent(this, MediaPlayerHolder.class));
+            Intent intent = new Intent(this, MediaPlayerHolder.class);
+            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
             arrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_checked, songsListView);
             songsList.setAdapter(arrayAdapter);
         }
@@ -115,22 +137,51 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
+                int iterator = 0;
                 long songID = songsListView.get(position).getSongID();
-                for (int i = 0; i < mediaPlayerHolder.getSongsList().size(); i++) {
-                    if (mediaPlayerHolder.getSongsList().get(i).getSongID() == songID) {
-                        mediaPlayerHolder.setSongIterator(i);
+                for (int i = 0; i < baseSongList.size(); i++) {
+                    if (baseSongList.get(i).getSongID() == songID) {
+                        iterator = i;
                     }
                 }
-                mediaPlayerHolder.loadMedia(songID);
-                mediaPlayerHolder.getPreviouslyPlayed().add(mediaPlayerHolder.getSongIterator());
-                mediaPlayerHolder.getMediaController().show(0);
+                Intent intent = new Intent("PLAY_SONG");
+                intent.putExtra("ITERATOR",iterator);
+                intent.putExtra("ID", songID);
+                sendBroadcast(intent);
             }
         });
-        mediaPlayerHolder.setMediaController();
-        mediaPlayerHolder.getMediaController().setAnchorView((findViewById(R.id.mainView)));
-        mediaPlayerHolder.getMediaController().setEnabled(true);
+
     }
 
+    ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            MediaPlayerHolder.LocalBinder binder = (MediaPlayerHolder.LocalBinder) service;
+            mediaPlayerHolder = binder.getService();
+            mBound = true;
+
+            /*
+            Bind service call is asynchronous so we start media controller after it's successfully
+            bound to our service class
+             */
+            if(mediaPlayerHolder!=null){
+                setMediaController();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
 
     @Override
     protected void onResume() {
@@ -139,11 +190,21 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     }
 
     @Override
+    protected void onStop(){
+        super.onStop();
+        if (mBound) {
+            unbindService(mConnection);
+            mBound = false;
+        }
+
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
-        if (mediaPlayerHolder.getMediaPlayer() != null) {
-            mediaPlayerHolder.getMediaPlayer().release();
-        }
+        //if (//mediaPlayerHolder.getMediaPlayer() != null) {
+        //mediaPlayerHolder.getMediaPlayer().release();
+        //}
     }
 
     @Override
@@ -155,16 +216,11 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                         if (ContextCompat.checkSelfPermission(MainActivity.this,
                                 Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_DENIED) {
                             Toast.makeText(this, "permission granted", Toast.LENGTH_LONG).show();
-                            mediaPlayerHolder.fillSongList();
-                            for (Song song : mediaPlayerHolder.getSongsList()) {
-                                songsListView.add(song);
-                            }
-                            arrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, songsListView);
+                            //startService(new Intent(this, MediaPlayerHolder.class));
+                            Intent intent = new Intent(this, MediaPlayerHolder.class);
+                            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+                            arrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_checked, songsListView);
                             songsList.setAdapter(arrayAdapter);
-                            Log.d("dddddd2", "" + mediaPlayerHolder.getSongsList().size());
-                            //fillListView();
-                            //ArrayAdapter arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, songList);
-                            //songsList.setAdapter(arrayAdapter);
                         } else {
                             Toast.makeText(this, "no permission granted", Toast.LENGTH_LONG).show();
                             finish();
@@ -176,53 +232,10 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         }
     }
 
-    public void createNotification(String songName, String currentState, boolean isPlaying) {
-
-        // preparing to add notifications
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setAction(Intent.ACTION_MAIN);
-        intent.addCategory(Intent.CATEGORY_LAUNCHER);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        Intent playNextIntent = new Intent();
-        playNextIntent.setAction("PLAY_NEXT");
-        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, 1, playNextIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        Intent pauseIntent = new Intent();
-        pauseIntent.setAction("PAUSE");
-        PendingIntent pausePendingIntent = PendingIntent.getBroadcast(this, 2, pauseIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        Intent playPreviousIntent = new Intent();
-        playPreviousIntent.setAction("PLAY_PREVIOUS");
-        PendingIntent prevPendingIntent = PendingIntent.getBroadcast(this, 3, playPreviousIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "MusicID")
-                .setSmallIcon(R.drawable.ic_launcher_background) //notification icon
-                .setContentTitle("Simple Music Player")
-                .setContentText("Currently playing: " + songName)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setWhen(0)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) //visible on locked screen
-                .setOngoing(isPlaying) //user can't remove notification
-                .addAction(R.drawable.ic_previous, "Previous", prevPendingIntent) // #0
-                .addAction(R.drawable.ic_pause, currentState, pausePendingIntent)  // #1
-                .addAction(R.drawable.ic_next, "Next", nextPendingIntent)// #2
-                .setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle().setMediaSession(MediaSessionCompat.Token.fromToken(mediaSession.getSessionToken())))
-                .setContentIntent(pendingIntent); //on click go to app intent
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-
-        // notificationId is a unique int for each notification that you must define
-        notificationManager.notify(1, mBuilder.build()); //show notification
-    }
-
-    // now media controller can be showed since activity is launched
     @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (mediaPlayerHolder.getMediaController() != null) {
-            //mediaPlayerHolder.getMediaController().show(0);
-        }
+    public void onBackPressed() {
+        //pressing back button makes app go background
+        moveTaskToBack(true);
     }
 
 
@@ -242,17 +255,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         }
     }
 
-    /*
-    Methods for creating menu for toolbar and to complete action when button is pressed
-     */
-    @Override
-    public boolean onOptionsItemSelected(MenuItem menuItem) {
-        switch (menuItem.getItemId()) {
-            case R.id.action_shuffle:
-
-        }
-        return true;
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -276,27 +278,133 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         if (songsListView != null) {
             songsListView.clear();
         }
-        for (int i = 0; i < mediaPlayerHolder.getSongsList().size(); i++) {
-            if (mediaPlayerHolder.getSongsList().get(i).getSongName().contains(newText) ||
-                    mediaPlayerHolder.getSongsList().get(i).getArtistName().contains(newText)) {
-                songsListView.add(new Song(mediaPlayerHolder.getSongsList().get(i).getSongName(),
-                        mediaPlayerHolder.getSongsList().get(i).getArtistName(),
-                        mediaPlayerHolder.getSongsList().get(i).getAlbum(),
-                        mediaPlayerHolder.getSongsList().get(i).getSongID()));
+        for (int i = 0; i < baseSongList.size(); i++) {
+            if (baseSongList.get(i).getSongName().toUpperCase().contains(newText.toUpperCase()) ||
+                    baseSongList.get(i).getArtistName().toUpperCase().contains(newText.toUpperCase())) {
+                songsListView.add(new Song(baseSongList.get(i).getSongName(),
+                        baseSongList.get(i).getArtistName(),
+                        baseSongList.get(i).getAlbum(),
+                        baseSongList.get(i).getSongID()));
             }
         }
         arrayAdapter.notifyDataSetChanged();
         return false;
     }
 
-    public void onClick(View view) {
-        if(view.getId() == R.id.action_shuffle || view.getId() == R.id.shuffle_text){
-            playShuffle = !playShuffle;
-            mediaPlayerHolder.setShuffle(playShuffle);
-            mediaPlayerHolder.removeHistory();
-            Toast.makeText(MainActivity.this, "Shuffle is " + playShuffle, Toast.LENGTH_LONG).show();
-        } else {
+    @Override
+    public void start() {
+        mediaPlayerHolder.getMediaPlayer().start();
+    }
 
+    @Override
+    public void pause() {
+        mediaPlayerHolder.getMediaPlayer().pause();
+    }
+
+    @Override
+    public int getDuration() {
+        return mediaPlayerHolder.getMediaPlayer().getDuration();
+    }
+
+    @Override
+    public int getCurrentPosition() {
+        return mediaPlayerHolder.getMediaPlayer().getCurrentPosition();
+    }
+
+    @Override
+    public void seekTo(int pos) {
+        mediaPlayerHolder.getMediaPlayer().seekTo(pos);
+    }
+
+    @Override
+    public boolean isPlaying() {
+        return mediaPlayerHolder.getMediaPlayer().isPlaying();
+    }
+
+    @Override
+    public int getBufferPercentage() {
+        return 0;
+    }
+
+    @Override
+    public boolean canPause() {
+        return true;
+    }
+
+    @Override
+    public boolean canSeekBackward() {
+        return true;
+    }
+
+    @Override
+    public boolean canSeekForward() {
+        return true;
+    }
+
+    @Override
+    public int getAudioSessionId() {
+        return 0;
+    }
+
+    public void setMediaController(){
+        mediaController.setMediaPlayer(this);
+        mediaController.setAnchorView(findViewById(R.id.mainView));
+        mediaController.setEnabled(true);
+        mediaController.show(0);
+        mediaController.setPrevNextListeners(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                mediaPlayerHolder.nextSong();
+                mediaPlayerHolder.loadMedia(mediaPlayerHolder.getSongsList().get(mediaPlayerHolder.getSongIterator()).getSongID());
+            }
+        }, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mediaPlayerHolder.previousSong();
+                mediaPlayerHolder.loadMedia(mediaPlayerHolder.getSongsList().get(mediaPlayerHolder.getSongIterator()).getSongID());
+            }
+        });
+    }
+
+    private class receiveFromService extends BroadcastReceiver{
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(intent.getAction().equals("SONG_LIST")){
+                baseSongList = (ArrayList<Song>) intent.getSerializableExtra("songsList");
+                songsListView.addAll(baseSongList);
+                arrayAdapter.notifyDataSetChanged();
+            } else if(intent.getAction().equals("MEDIA_CONTROLLER")){
+            }
+
+        }
+    }
+    //Quick menu toolbar onClick method
+    public void onClick(View view) {
+        if (view.getId() == R.id.action_shuffle || view.getId() == R.id.shuffle_text) {
+                playShuffle = !playShuffle;
+                Intent shuffleIntent = new Intent("SHUFFLE");
+                shuffleIntent.putExtra("ShuffleBoolean", playShuffle);
+                sendBroadcast(shuffleIntent);
+                Toast.makeText(MainActivity.this, "Shuffle is " + playShuffle, Toast.LENGTH_SHORT).show();
+        } else if (view.getId() == R.id.action_sort) {
+            //creating dialog to choose sort type
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle(R.string.sort_songs)
+                    .setItems(R.array.sort_type, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            songsListView.clear();
+                            baseSongList.clear();
+                            Intent sortIntent = new Intent("SORT_TYPE");
+                            sortIntent.putExtra("SORT", which);
+                            sendBroadcast(sortIntent);
+                            //clear previous list
+
+                        }
+                    });
+            AlertDialog dialog = builder.create();
+            dialog.show();
         }
     }
 }
