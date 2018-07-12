@@ -11,8 +11,21 @@ public class Playlist {
         this.playlistSongs = new ArrayList<>();
     }
 
+    public ArrayList<Song> getPlaylistSongs() {
+        return playlistSongs;
+    }
+
+    public String getName() {
+        return name;
+    }
+
     @Override
     public String toString() {
         return name;
     }
+
+    public int getCount(){
+        return playlistSongs.size();
+    }
 }
+

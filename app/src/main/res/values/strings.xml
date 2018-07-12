@@ -12,4 +12,5 @@
     <string name="playlist_name">Playlist name</string>
     <string name="playlist_message">Enter playlist name</string>
     <string name="sort_songs">Sort by</string>
+    <string name="playlist_count">Total songs: </string>
 </resources>

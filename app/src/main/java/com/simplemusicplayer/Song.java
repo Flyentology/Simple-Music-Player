@@ -1,5 +1,6 @@
 package com.simplemusicplayer;
 
+import android.graphics.Bitmap;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -11,20 +12,34 @@ public class Song implements Parcelable {
     private String artistName;
     private String album;
     private long songID;
+    private Bitmap albumArt;
+    private String pathID;
 
-    public Song(String songName, String artistName, String album, long songID) {
+    public Song(String songName, String artistName, String album, long songID, Bitmap albumArt, String pathID) {
         this.songName = songName;
         this.artistName = artistName;
         this.album = album;
         this.songID = songID;
+        this.albumArt = albumArt;
+        this.pathID = pathID;
     }
 
+    public Song(String songName, String artistName, String album, long songID, String pathID){
+        this.songName = songName;
+        this.artistName = artistName;
+        this.album = album;
+        this.songID = songID;
+        this.pathID = pathID;
+        albumArt = null;
+    }
 
     protected Song(Parcel in) {
         songName = in.readString();
         artistName = in.readString();
         album = in.readString();
         songID = in.readLong();
+        albumArt = in.readParcelable(null);
+        pathID = in.readString();
     }
 
     public static final Creator<Song> CREATOR = new Creator<Song>() {
@@ -55,6 +70,18 @@ public class Song implements Parcelable {
         return songID;
     }
 
+    public String getPathID() {
+        return pathID;
+    }
+
+    public Bitmap getAlbumArt(){
+        return albumArt;
+    }
+
+    public void setAlbumArt(Bitmap albumArt) {
+        this.albumArt = albumArt;
+    }
+
     @Override
     public String toString() {
         return songName + " " + artistName;
@@ -71,6 +98,8 @@ public class Song implements Parcelable {
         dest.writeString(artistName);
         dest.writeString(album);
         dest.writeLong(songID);
+        dest.writeParcelable(albumArt, 0);
+        dest.writeString(pathID);
     }
 }
 

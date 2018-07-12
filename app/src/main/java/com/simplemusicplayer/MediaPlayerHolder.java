@@ -21,7 +21,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
-import android.view.View;
 import android.widget.MediaController;
 
 import java.io.IOException;
@@ -30,14 +29,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static android.os.PowerManager.PARTIAL_WAKE_LOCK;
 
 public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompletionListener, Serializable {
 
     private ArrayList<Song> songsList = new ArrayList<>();
     private MediaPlayer mediaPlayer;
     private int songIterator = 0;
-    private MediaController mediaController;
     private boolean playedOnce, shuffle = false;
     private List<Integer> previouslyPlayed;
     private int index = 0;
@@ -66,7 +63,6 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         this.mediaPlayer.setOnCompletionListener(this);
 
         fillSongList(0);
-        createNotification("3", "Pause", mediaPlayer.isPlaying());
 
         //creating an instance of nested receiver
         NotificationReceiver notificationReceiver = new NotificationReceiver();
@@ -75,56 +71,28 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         intentFilter.addAction("PLAY_NEXT");
         intentFilter.addAction("PAUSE");
         intentFilter.addAction("PLAY_PREVIOUS");
-        intentFilter.addAction("PLAY_SONG");
         intentFilter.addAction("SHUFFLE");
         intentFilter.addAction("SORT_TYPE");
         getApplicationContext().registerReceiver(notificationReceiver, intentFilter);
         return mBinder;
     }
 
-
-//    public MediaPlayerHolder() {
-//        this.previouslyPlayed = new ArrayList<>();
-//        this.mediaPlayer = new MediaPlayer();
-//        this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-//    }
-
-//    @Override
-//    public void onCreate() {
-//        this.previouslyPlayed = new ArrayList<>();
-//        this.mediaPlayer = new MediaPlayer();
-//        this.mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-//        this.mediaSession = new MediaSession(this, "Playback");
-//        this.mediaPlayer.setOnCompletionListener(this);
-//
-//        fillSongList(0);
-//        createNotification("3", "Pause", mediaPlayer.isPlaying());
-//
-//        //creating an instance of nested receiver
-//        NotificationReceiver notificationReceiver = new NotificationReceiver();
-//        IntentFilter intentFilter = new IntentFilter();
-//        intentFilter.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
-//        intentFilter.addAction("PLAY_NEXT");
-//        intentFilter.addAction("PAUSE");
-//        intentFilter.addAction("PLAY_PREVIOUS");
-//        intentFilter.addAction("PLAY_SONG");
-//        intentFilter.addAction("SHUFFLE");
-//        intentFilter.addAction("SORT_TYPE");
-//        getApplicationContext().registerReceiver(notificationReceiver, intentFilter);
-//    }
+    /*
+    Called when we start a service
+     */
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        createNotification("Pause");
+        return super.onStartCommand(intent, flags, startId);
+    }
 
     public List<Integer> getPreviouslyPlayed() {
         return previouslyPlayed;
     }
 
-    public MediaController getMediaController() {
-        return mediaController;
-    }
-
     public void setShuffle(boolean shuffle) {
         this.shuffle = shuffle;
     }
-
 
     public MediaPlayer getMediaPlayer() {
         return mediaPlayer;
@@ -135,7 +103,6 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
     }
 
     public int getSongIterator() {
-        index = previouslyPlayed.size() - 1;
         return songIterator;
     }
 
@@ -165,13 +132,17 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
             int artistColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST);
             int albumColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM);
             int idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
+            //add songs to the list
             do {
                 long id = cursor.getLong(idColumn);
                 String thisTitle = cursor.getString(titleColumn);
                 String artistName = cursor.getString(artistColumn);
                 String albumName = cursor.getString(albumColumn);
-                songsList.add(new Song(thisTitle, artistName, albumName, id));
+                String pathId = cursor.getString(column_index);
+                songsList.add(new Song(thisTitle, artistName, albumName, id, pathId));
             } while (cursor.moveToNext());
+
             Intent intent = new Intent("SONG_LIST");
             intent.putParcelableArrayListExtra("songsList", songsList);
             sendBroadcast(intent);
@@ -194,9 +165,9 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         } catch (IOException e1) {
             e1.printStackTrace();
         }
+        Intent refreshBar = new Intent("REFRESH");
+        sendBroadcast(refreshBar);
         playedOnce = true;
-//        Intent showMediaController = new Intent("MEDIA_CONTROLLER");
-//        sendBroadcast(showMediaController);
         updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
     }
 
@@ -213,7 +184,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         mediaPlayer.reset();
     }
 
-    public void createNotification(String songName, String currentState, boolean isPlaying) {
+    public void createNotification(String currentState) {
 
         // preparing to add notifications
         Intent intent = new Intent(this, MainActivity.class);
@@ -237,11 +208,9 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         mBuilder = new NotificationCompat.Builder(this, "MusicID")
                 .setSmallIcon(R.drawable.ic_launcher_background) //notification icon
                 .setContentTitle("Simple Music Player")
-                .setContentText("Currently playing: " + songName)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setWhen(0)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) //visible on locked screen
-                .setOngoing(isPlaying) //user can't remove notification
                 .addAction(R.drawable.ic_previous, "Previous", prevPendingIntent) // #0
                 .addAction(R.drawable.ic_pause, currentState, pausePendingIntent)  // #1
                 .addAction(R.drawable.ic_next, "Next", nextPendingIntent)// #2
@@ -252,12 +221,18 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         // notificationId is a unique int for each notification that you must define
     }
 
-    private void updateNotification(String songName) {
+    public void updateNotification(String songName) {
 
         mBuilder.setContentText("Currently playing: " + songName);
         mBuilder.setOngoing(mediaPlayer.isPlaying());
         NotificationManagerCompat mNotificationManager = NotificationManagerCompat.from(this);
         mNotificationManager.notify(1337, mBuilder.build());
+        if(mediaPlayer.isPlaying()){
+            startForeground(1337, mBuilder.build());
+        } else{
+            stopForeground(false);
+        }
+
     }
 
     public class NotificationReceiver extends BroadcastReceiver {
@@ -287,16 +262,11 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                     case AudioManager.ACTION_AUDIO_BECOMING_NOISY:
                         mediaPlayer.start();
                         break;
-                    case "PLAY_SONG":
-                        Log.d("ddd", "here");
-                        songIterator = intent.getIntExtra("ITERATOR", -1);
-                        loadMedia(intent.getLongExtra("ID", -1));
-                        previouslyPlayed.add(songIterator);
-                        break;
                     case "SHUFFLE":
                         setShuffle(intent.getBooleanExtra("ShuffleBoolean", false));
                         randomSong();
                         removeHistory();
+                        break;
                     case "SORT_TYPE":
                         songsList.clear();
                         if(intent.getIntExtra("SORT", -1) == 0){
@@ -327,16 +297,20 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                 previouslyPlayed.add(songIterator);
                 index = previouslyPlayed.size() - 1;
             }
-        } else {
+        } else if(songIterator < songsList.size()-1){
             songIterator++;
+        } else {
+            songIterator = 0;
         }
     }
 
     void previousSong() {
         if (shuffle) {
             if (index > 0) {
+                Log.d("ddd", "" + index);
                 index--;
                 songIterator = previouslyPlayed.get(index);
+                Log.d("ddd", "" + index);
             } else {
                 Random r = new Random();
                 songIterator = r.nextInt(songsList.size());

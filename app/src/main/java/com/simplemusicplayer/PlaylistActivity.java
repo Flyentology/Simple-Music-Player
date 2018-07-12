@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.Toast;
@@ -40,8 +41,12 @@ public class PlaylistActivity extends AppCompatActivity {
             }
         });
 
+        playlistGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
-
+            }
+        });
     }
 
     @Override
@@ -55,7 +60,6 @@ public class PlaylistActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem menuItem) {
         switch (menuItem.getItemId()) {
             case R.id.add:
-                //TODO: Popup window to create playlist
                 AlertDialog.Builder builder = new AlertDialog.Builder(PlaylistActivity.this);
                 //set up the input
                 final EditText input = new EditText(this);
