@@ -6,4 +6,5 @@
     <color name="colorToolbar">#ffffff</color>
     <color name="black">#000000</color>
     <color name="background_material_light">#000000</color>
+    <color name="grey">#d3d3d3</color>
 </resources>

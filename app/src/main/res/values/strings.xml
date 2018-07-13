@@ -13,4 +13,5 @@
     <string name="playlist_message">Enter playlist name</string>
     <string name="sort_songs">Sort by</string>
     <string name="playlist_count">Total songs: </string>
+    <string name="title_activity_add_songs">AddSongsActivity</string>
 </resources>

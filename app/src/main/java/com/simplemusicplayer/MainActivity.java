@@ -483,7 +483,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                             Intent sortIntent = new Intent("SORT_TYPE");
                             sortIntent.putExtra("SORT", which);
                             sendBroadcast(sortIntent);
-                            Log.d("dddd", "Create2 " + mediaPlayerHolder.getSongsList().size());
                         }
                     });
             AlertDialog dialog = builder.create();
