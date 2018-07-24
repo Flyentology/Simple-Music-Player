@@ -1,8 +1,6 @@
 package com.simplemusicplayer;
 
 import android.content.Context;
-import android.content.res.Resources;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +18,11 @@ public class PlaylistAdapter extends BaseAdapter {
     PlaylistAdapter(Context context, ArrayList<Playlist> playlists) {
         this.playlists = playlists;
         this.mContext = context;
+    }
+
+    static class ViewHolder {
+        protected TextView name, songsCount;
+        protected ImageView image;
     }
 
     @Override
@@ -40,31 +43,31 @@ public class PlaylistAdapter extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         Playlist playlist = playlists.get(position);
+        ViewHolder holder;
         if (convertView == null) {
             // if it's not recycled, initialize some attributes
             LayoutInflater layoutInflater = LayoutInflater.from(mContext);
             convertView = layoutInflater.inflate(R.layout.playlist_item, parent, false);
-        }
 
-        ImageView image = convertView.findViewById(R.id.imageView_coverPlaylist);
-        if(playlist.getPlaylistSongs().size() > 0){
-            for(int i = 0; i<playlist.getPlaylistSongs().size(); i++)
-            {
-                if (playlist.getPlaylistSongs().get(i).getAlbumArt() != null) {
-                    image.setImageBitmap(playlist.getPlaylistSongs().get(position).getAlbumArt());
-                }
-            }
+            holder = new ViewHolder();
+
+            holder.image = convertView.findViewById(R.id.imageView_coverPlaylist);
+            holder.name = convertView.findViewById(R.id.textView_playlistName);
+            holder.songsCount = convertView.findViewById(R.id.textView_songsCount);
+            convertView.setTag(holder);
         } else {
-            image.setBackgroundColor(Color.parseColor("#D3D3D3"));
-            image.setImageResource(R.drawable.ic_empty_cover);
+            holder = (ViewHolder) convertView.getTag();
+
+            if (playlist.getPlaylistArt() != null) {
+                holder.image.setImageBitmap(playlist.getPlaylistArt());
+            } else {
+                holder.image.setImageDrawable(mContext.getResources().getDrawable(R.drawable.ic_empty_cover));
+            }
+
+            holder.name.setText(playlist.getName());
+            holder.songsCount.setText(mContext.getResources().getString(R.string.playlist_count) + Integer.toString(playlist.getCount()));
         }
-
-        TextView name = convertView.findViewById(R.id.textView_playlistName);
-        name.setText(playlist.getName());
-
-        TextView songsCount = convertView.findViewById(R.id.textView_songsCount);
-        songsCount.setText(Resources.getSystem().getString(R.string.playlist_count) + String.valueOf(playlist.getCount()));
-
         return convertView;
     }
+
 }

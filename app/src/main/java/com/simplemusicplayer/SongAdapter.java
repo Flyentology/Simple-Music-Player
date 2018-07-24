@@ -12,7 +12,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class SongAdapter extends ArrayAdapter {
 
@@ -34,8 +33,8 @@ public class SongAdapter extends ArrayAdapter {
 
         Song currentSong = songList.get(position);
         ImageView image = listItem.findViewById(R.id.imageView_cover);
-        if(currentSong.getAlbumArt() != null){
-            image.setImageBitmap(currentSong.getAlbumArt());
+        if (currentSong.getCoverArt() != null) {
+            image.setImageBitmap(currentSong.getCoverArt());
         } else {
             image.setBackgroundColor(Color.parseColor("#D3D3D3"));
             image.setImageResource(R.drawable.ic_empty_cover);

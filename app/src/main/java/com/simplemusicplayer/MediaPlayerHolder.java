@@ -3,25 +3,21 @@ package com.simplemusicplayer;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
-import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
-import android.widget.MediaController;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -62,8 +58,6 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         this.mediaSession = new MediaSession(this, "Playback");
         this.mediaPlayer.setOnCompletionListener(this);
 
-        fillSongList(0);
-
         //creating an instance of nested receiver
         NotificationReceiver notificationReceiver = new NotificationReceiver();
         IntentFilter intentFilter = new IntentFilter();
@@ -102,52 +96,16 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         return songsList;
     }
 
+    public void setSongsList(ArrayList<Song> songsList) {
+        this.songsList = songsList;
+    }
+
     public int getSongIterator() {
         return songIterator;
     }
 
     public void setSongIterator(int songIterator) {
         this.songIterator = songIterator;
-    }
-
-    public void fillSongList(int sortOrder) {
-        ContentResolver contentResolver = getApplicationContext().getContentResolver();
-        Uri uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI; //uri is basically URL, so points to a place in the phone where media is stored
-        Cursor cursor;
-        //choose sort order
-        if (sortOrder == 0) {
-            cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.DATE_ADDED + " COLLATE NOCASE ASC"); //query for audio files on the phone
-        } else {
-            cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.TITLE + " COLLATE NOCASE ASC"); //query for audio files on the phone
-        }
-        if (cursor == null) {
-            // query failed
-            Log.d("Cursors ", "query failed");
-        } else if (!cursor.moveToFirst()) {
-            //no media on the device
-            Log.d("Media", "no media on the device");
-        } else {
-            // get index of each parameter of audio file
-            int titleColumn = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE);
-            int artistColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST);
-            int albumColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM);
-            int idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
-            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
-            //add songs to the list
-            do {
-                long id = cursor.getLong(idColumn);
-                String thisTitle = cursor.getString(titleColumn);
-                String artistName = cursor.getString(artistColumn);
-                String albumName = cursor.getString(albumColumn);
-                String pathId = cursor.getString(column_index);
-                songsList.add(new Song(thisTitle, artistName, albumName, id, pathId));
-            } while (cursor.moveToNext());
-
-            Intent intent = new Intent("SONG_LIST");
-            intent.putParcelableArrayListExtra("songsList", songsList);
-            sendBroadcast(intent);
-            cursor.close(); //cursors should be freed up after use
-        }
     }
 
     //Load song and start playback
@@ -270,9 +228,9 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                     case "SORT_TYPE":
                         songsList.clear();
                         if(intent.getIntExtra("SORT", -1) == 0){
-                            fillSongList(0);
+                            FillSongList.fillSongList(MediaPlayerHolder.this, 0);
                         } else if(intent.getIntExtra("SORT", -1) == 1){
-                            fillSongList(1);
+                            FillSongList.fillSongList(MediaPlayerHolder.this, 1);
                         }
                         break;
 

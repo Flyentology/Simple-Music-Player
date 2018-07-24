@@ -14,4 +14,6 @@
     <string name="sort_songs">Sort by</string>
     <string name="playlist_count">Total songs: </string>
     <string name="title_activity_add_songs">AddSongsActivity</string>
+    <string name="delete_playlist">Delete playlist</string>
+    <string name="delete_playlist_message">Do you really want to delete current playlist?</string>
 </resources>
