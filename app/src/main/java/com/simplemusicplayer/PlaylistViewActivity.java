@@ -1,14 +1,18 @@
 package com.simplemusicplayer;
 
 import android.app.Activity;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -20,7 +24,7 @@ public class PlaylistViewActivity extends AppCompatActivity {
 
     private ArrayList<Song> playlistSongs = new ArrayList<>();
     private final int RECEIVE_SONGS = 1;
-    private SongAdapter playlistAdapter;
+    private PlaylistViewAdapter playlistAdapter;
     private Handler mHandler;
 
     @Override
@@ -35,29 +39,48 @@ public class PlaylistViewActivity extends AppCompatActivity {
         playlistSongs.addAll(list);
 
         ListView playlistView = findViewById(R.id.playlistSongs);
-        playlistAdapter = new SongAdapter(this, this, playlistSongs);
+        playlistAdapter = new PlaylistViewAdapter(this, playlistSongs);
         playlistView.setAdapter(playlistAdapter);
 
-
+        Toolbar toolbar = findViewById(R.id.playlist_view_toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setTitle(intent.getStringExtra("PLAYLIST_NAME"));
+        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent resultIntent = new Intent();
+                resultIntent.putParcelableArrayListExtra("CURRENT_PLAYLIST", playlistSongs);
+                setResult(PlaylistViewActivity.RESULT_OK, resultIntent);
+                finish();
+            }
+        });
         TextView playlistTitle = findViewById(R.id.playlistTitle);
         playlistTitle.setText(intent.getStringExtra("PLAYLIST_NAME"));
+
+        FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        MediaControllerFragment mediaControllerFragment = new MediaControllerFragment();
+        fragmentTransaction.add(R.id.playlistViewActivity_container, mediaControllerFragment);
+        fragmentTransaction.commit();
+
+        playlistView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                //TODO: stop playback if user deletes playlist
+                Intent sendPlaylist = new Intent("PLAY_PLAYLIST");
+                sendPlaylist.putParcelableArrayListExtra("PLAYLIST", playlistSongs);
+                sendPlaylist.putExtra("PLAYLIST_ITERATOR", i);
+                sendBroadcast(sendPlaylist);
+            }
+        });
 
         ImageButton addSongs = findViewById(R.id.addSongs);
         addSongs.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 startActivityForResult(new Intent(PlaylistViewActivity.this, AddSongsActivity.class), RECEIVE_SONGS);
-            }
-        });
-
-        ImageButton navigateBack = findViewById(R.id.finishActivity);
-        navigateBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent resultIntent = new Intent();
-                resultIntent.putParcelableArrayListExtra("CURRENT_PLAYLIST", playlistSongs);
-                setResult(PlaylistViewActivity.RESULT_OK, resultIntent);
-                finish();
             }
         });
 
@@ -72,9 +95,7 @@ public class PlaylistViewActivity extends AppCompatActivity {
                         .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-
-                                Intent resultIntent = new Intent();
-                                setResult(PlaylistViewActivity.RESULT_CANCELED, resultIntent);
+                                setResult(11);
                                 finish();
                             }
                         });

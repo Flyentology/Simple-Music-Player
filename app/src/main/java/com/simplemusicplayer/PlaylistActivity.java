@@ -1,6 +1,8 @@
 package com.simplemusicplayer;
 
 import android.app.Activity;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -54,9 +56,14 @@ public class PlaylistActivity extends AppCompatActivity {
             }
         });
 
+        // add fragment with music player
+        FragmentManager manager = getFragmentManager();
+        FragmentTransaction transaction = manager.beginTransaction();
+        MediaControllerFragment mediaControllerFragment = new MediaControllerFragment();
+        transaction.add(R.id.playlistActivity_container, mediaControllerFragment);
+        transaction.commit();
 
         mHandler = new Handler() {
-
             //wait for messages from each thread and refresh list
             public void handleMessage(android.os.Message msg) {
                 Log.d("ddd", "imhere");
@@ -84,7 +91,6 @@ public class PlaylistActivity extends AppCompatActivity {
                 playlistPosition = position;
                 Intent viewPlaylist = new Intent(PlaylistActivity.this, PlaylistViewActivity.class);
                 viewPlaylist.putParcelableArrayListExtra("Playlist Content", playlists.get(position).getPlaylistSongs());
-                //viewPlaylist.putParcelableArrayListExtra("Playlist Content", playlists);
                 viewPlaylist.putExtra("PLAYLIST_NAME", playlists.get(position).getName());
                 startActivityForResult(viewPlaylist, VIEW_PLAYLIST);
             }
@@ -153,30 +159,26 @@ public class PlaylistActivity extends AppCompatActivity {
                     }
                     writeJSON(playlists);
                     playlistAdapter.notifyDataSetChanged();
+                } else if (resultCode == 11) {
+                    playlists.remove(playlistPosition);
+                    writeJSON(playlists);
+                    playlistAdapter.notifyDataSetChanged();
                 }
-//                if(resultCode == Activity.RESULT_CANCELED){
-//                    playlists.remove(playlistPosition);
-//                    writeJSON(playlists);
-//                    playlistAdapter.notifyDataSetChanged();
-//                }
             }
         }
     }
 
-    public boolean writeJSON(ArrayList<Playlist> playlists) {
+    public void writeJSON(ArrayList<Playlist> playlists) {
 
         SharedPreferences mSettings = getSharedPreferences("Playlists", Context.MODE_PRIVATE);
         SharedPreferences.Editor mEditor = mSettings.edit();
-
         Type type = new TypeToken<ArrayList<Playlist>>() {
         }.getType();
         try {
             String writeValue = mGson.toJson(playlists, type);
             mEditor.putString("Playlists", writeValue);
-            mEditor.commit();
-            return true;
+            mEditor.apply();
         } catch (Exception e) {
-            return false;
         }
     }
 

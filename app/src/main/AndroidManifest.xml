@@ -29,14 +29,16 @@
         </activity>
         <activity
             android:name=".PlaylistActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme" />
         <activity
             android:name=".LastPlayedActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme" />
         <activity
             android:name=".FavoritesActivity"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme" />
 
         <service
             android:name=".MediaPlayerHolder"
@@ -46,7 +48,10 @@
             android:name=".AddSongsActivity"
             android:label="@string/title_activity_add_songs"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-        <activity android:name=".PlaylistViewActivity"></activity>
+        <activity
+            android:name=".PlaylistViewActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme" />
     </application>
 
 </manifest>

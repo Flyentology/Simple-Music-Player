@@ -1,15 +1,15 @@
 package com.simplemusicplayer;
 
 import android.Manifest;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.SearchManager;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
@@ -28,24 +28,27 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.MediaController;
 import android.widget.SearchView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener, MediaController.MediaPlayerControl {
+public class MainActivity extends AppCompatActivity implements SearchView.OnQueryTextListener {
 
     private final int MY_PERMISSIONS_REQUEST = 1;
     private ListView songsList;
     private boolean playShuffle = false;
+    private boolean listChanged = false;
+    private static int whichSortType = 0;
+    public static AtomicBoolean stopThreads = new AtomicBoolean(false);
     private SongAdapter songAdapter;
     private ArrayList<Song> songsListView = new ArrayList<>();
     private ArrayList<Song> baseSongList = new ArrayList<>();
     private boolean mBound = false;
-    MediaPlayerHolder mediaPlayerHolder;
-    private MediaController mediaController;
+    public MediaPlayerHolder mediaPlayerHolder;
     private Handler mHandler;
     private int threadCount = 0;
 
@@ -57,13 +60,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         Toolbar myToolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
         //getSupportActionBar().setDisplayShowTitleEnabled(false);
-
-        mediaController = new MediaController(this) {
-            @Override
-            public void hide() {
-                //TODO: MediaController blocks searching while playing
-            }
-        };
 
         mHandler = new Handler() {
             int count = 0;
@@ -86,28 +82,15 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             }
         };
 
-
         ListView mainMenu = findViewById(R.id.mainMenu);
         ArrayList<String> menuList = new ArrayList<>();
         ArrayAdapter<String> menuAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, menuList);
         mainMenu.setAdapter(menuAdapter);
         menuList.add(getString(R.string.last_played));
-        menuList.add(getString(R.string.favorites));
         menuList.add(getString(R.string.playlists));
 
         songsList = findViewById(R.id.songsList);
         songsList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-
-        /*
-        Registering receiver to receive songsList
-         */
-        receiveFromService receive = new receiveFromService();
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction("SONG_LIST");
-        intentFilter.addAction("MEDIA_CONTROLLER");
-        intentFilter.addAction("MEDIA_CONTROLLER");
-        intentFilter.addAction("REFRESH");
-        getApplicationContext().registerReceiver(receive, intentFilter);
 
         // runtime check for permission
         if (ContextCompat.checkSelfPermission(MainActivity.this,
@@ -129,12 +112,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             songsList.setAdapter(songAdapter);
             songsListView.addAll(baseSongList);
             songAdapter.notifyDataSetChanged();
-            int chunkSize = 100;
-            for (int i = 0; i < songsListView.size(); i += chunkSize) {
-                LoadCovers loadCovers = new LoadCovers(songsListView, mHandler, i, Math.min(i + chunkSize, songsListView.size()), 90, 90, true);
-                loadCovers.start();
-                threadCount++;
-            }
+            startThreads();
         }
 
         createNotificationChannel();
@@ -149,10 +127,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                         startActivity(lastPlayedIntent);
                         break;
                     case 1:
-                        Intent favoritesIntent = new Intent(MainActivity.this, FavoritesActivity.class);
-                        startActivity(favoritesIntent);
-                        break;
-                    case 2:
                         Intent playlistIntent = new Intent(MainActivity.this, PlaylistActivity.class);
                         startActivity(playlistIntent);
                         break;
@@ -169,14 +143,19 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                 for (int i = 0; i < baseSongList.size(); i++) {
                     if (baseSongList.get(i).getSongID() == songID) {
                         iterator = i;
-                        Log.d("dddd", "Create 3" + mediaPlayerHolder.getSongsList().size());
                     }
+                }
+                if (mediaPlayerHolder.isPlayingPlaylist() || listChanged) {
+                    mediaPlayerHolder.setSongsList(baseSongList);
+                    mediaPlayerHolder.setPlayingPlaylist(false);
+                    listChanged = false;
                 }
                 mediaPlayerHolder.setSongIterator(iterator);
                 mediaPlayerHolder.loadMedia(songID);
                 mediaPlayerHolder.getPreviouslyPlayed().add(iterator);
             }
         });
+
     }
 
     //Binding service
@@ -195,9 +174,14 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             bound to our service class
              */
             if (mediaPlayerHolder != null) {
-                setMediaController();
                 startService(new Intent(MainActivity.this, MediaPlayerHolder.class)); //we start service to make it foreground and bound
                 mediaPlayerHolder.setSongsList(baseSongList);
+                // Set fragment
+                FragmentManager fragmentManager = getFragmentManager();
+                FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+                MediaControllerFragment mediaControllerFragment = new MediaControllerFragment();
+                fragmentTransaction.add(R.id.mediaControllerContainer, mediaControllerFragment);
+                fragmentTransaction.commit();
             }
         }
 
@@ -253,12 +237,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                             songsList.setAdapter(songAdapter);
                             songsListView.addAll(baseSongList);
                             songAdapter.notifyDataSetChanged();
-                            int chunkSize = 100;
-                            for (int i = 0; i < songsListView.size(); i += chunkSize) {
-                                LoadCovers loadCovers = new LoadCovers(songsListView, mHandler, i, Math.min(i + chunkSize, songsListView.size()), 90, 90, true);
-                                loadCovers.start();
-                                threadCount++;
-                            }
+                            startThreads();
                         } else {
                             Toast.makeText(this, "no permission granted", Toast.LENGTH_LONG).show();
                             finish();
@@ -328,98 +307,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         return false;
     }
 
-    @Override
-    public void start() {
-        mediaPlayerHolder.getMediaPlayer().start();
-        mediaPlayerHolder.updateNotification(mediaPlayerHolder.getSongsList().get(mediaPlayerHolder.getSongIterator()).getArtistName() + " " +
-                mediaPlayerHolder.getSongsList().get(mediaPlayerHolder.getSongIterator()).getSongName());
-    }
-
-    @Override
-    public void pause() {
-        mediaPlayerHolder.getMediaPlayer().pause();
-        mediaPlayerHolder.updateNotification(mediaPlayerHolder.getSongsList().get(mediaPlayerHolder.getSongIterator()).getArtistName() + " " +
-                mediaPlayerHolder.getSongsList().get(mediaPlayerHolder.getSongIterator()).getSongName());
-    }
-
-    @Override
-    public int getDuration() {
-        return mediaPlayerHolder.getMediaPlayer().getDuration();
-    }
-
-    @Override
-    public int getCurrentPosition() {
-        return mediaPlayerHolder.getMediaPlayer().getCurrentPosition();
-    }
-
-    @Override
-    public void seekTo(int pos) {
-        mediaPlayerHolder.getMediaPlayer().seekTo(pos);
-    }
-
-    @Override
-    public boolean isPlaying() {
-        return mediaPlayerHolder.getMediaPlayer().isPlaying();
-    }
-
-    @Override
-    public int getBufferPercentage() {
-        return 0;
-    }
-
-    @Override
-    public boolean canPause() {
-        return true;
-    }
-
-    @Override
-    public boolean canSeekBackward() {
-        return true;
-    }
-
-    @Override
-    public boolean canSeekForward() {
-        return true;
-    }
-
-    @Override
-    public int getAudioSessionId() {
-        return 0;
-    }
-
-    public void setMediaController() {
-        mediaController.setMediaPlayer(this);
-        mediaController.setAnchorView(findViewById(R.id.mainView));
-        mediaController.setEnabled(true);
-        mediaController.setPrevNextListeners(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                mediaPlayerHolder.nextSong();
-                mediaPlayerHolder.loadMedia(mediaPlayerHolder.getSongsList().get(mediaPlayerHolder.getSongIterator()).getSongID());
-            }
-        }, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                mediaPlayerHolder.previousSong();
-                mediaPlayerHolder.loadMedia(mediaPlayerHolder.getSongsList().get(mediaPlayerHolder.getSongIterator()).getSongID());
-            }
-        });
-    }
-
-    private class receiveFromService extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-
-            if (intent.getAction().equals("REFRESH")) {
-                mediaController.show(0);
-            }
-
-        }
-    }
-
     //Quick menu toolbar onClick method
     public void onClick(View view) {
         if (view.getId() == R.id.action_shuffle || view.getId() == R.id.shuffle_text) {
@@ -434,16 +321,52 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             builder.setTitle(R.string.sort_songs)
                     .setItems(R.array.sort_type, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
-
-                            //clear previous list
+                            stopThreads.set(true);
                             songsListView.clear();
-                            Intent sortIntent = new Intent("SORT_TYPE");
-                            sortIntent.putExtra("SORT", which);
-                            sendBroadcast(sortIntent);
+                            switch (whichSortType) {
+                                case 0:
+                                    if (which == 0) {
+                                        Collections.reverse(baseSongList);
+                                        songsListView.addAll(baseSongList);
+                                    } else if (which == 1) {
+                                        whichSortType = 1;
+                                        baseSongList.clear();
+                                        baseSongList = FillSongList.fillSongList(MainActivity.this, whichSortType);
+                                        songsListView.addAll(baseSongList);
+                                        stopThreads.set(false);
+                                        startThreads();
+                                    }
+                                    break;
+                                case 1:
+                                    if (which == 0) {
+                                        whichSortType = 0;
+                                        baseSongList.clear();
+                                        baseSongList = FillSongList.fillSongList(MainActivity.this, whichSortType);
+                                        songsListView.addAll(baseSongList);
+                                        stopThreads.set(false);
+                                        startThreads();
+                                    } else if (which == 1) {
+                                        Collections.reverse(baseSongList);
+                                        songsListView.addAll(baseSongList);
+                                    }
+                                    break;
+                            }
+                            listChanged = true;
+                            songAdapter.notifyDataSetChanged();
                         }
                     });
             AlertDialog dialog = builder.create();
             dialog.show();
+        }
+    }
+
+    private void startThreads() {
+        int chunkSize = 100;
+
+        for (int i = 0; i < songsListView.size(); i += chunkSize) {
+            LoadCovers loadCovers = new LoadCovers(songsListView, mHandler, i, Math.min(i + chunkSize, songsListView.size()), 90, 90, true);
+            loadCovers.start();
+            threadCount++;
         }
     }
 }

@@ -4,7 +4,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Handler;
-import android.util.Log;
 
 import java.util.ArrayList;
 
@@ -49,7 +48,6 @@ class LoadCovers extends Thread {
                 metaRetreiver.setDataSource(baseSongList.get(i).getPath());
                 byte[] art = metaRetreiver.getEmbeddedPicture();
                 if (art != null) {
-                    Log.d("ddd", "not null");
                     BitmapFactory.Options opt = new BitmapFactory.Options();
                     opt.inJustDecodeBounds = true; //just check size of image
                     BitmapFactory.decodeByteArray(art, 0, art.length, opt);
@@ -82,6 +80,9 @@ class LoadCovers extends Thread {
                         handler.obtainMessage(i).sendToTarget();
                         break;
                     }
+                }
+                if (MainActivity.stopThreads.get()) {
+                    break;
                 }
             } catch (Exception e) {
             }

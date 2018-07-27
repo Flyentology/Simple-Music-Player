@@ -32,19 +32,19 @@ public class FillSongList {
             int albumColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM);
             int idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
             int dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
-            //add songs to the list
             do {
                 long id = cursor.getLong(idColumn);
                 String thisTitle = cursor.getString(titleColumn);
                 String artistName = cursor.getString(artistColumn);
                 String albumName = cursor.getString(albumColumn);
                 String path = cursor.getString(dataColumn);
+                //add songs to the list
                 songsList.add(new Song(thisTitle, artistName, albumName, id, path));
             } while (cursor.moveToNext());
-
             cursor.close();
             //cursors should be freed up after use
         }
         return songsList;
+
     }
 }

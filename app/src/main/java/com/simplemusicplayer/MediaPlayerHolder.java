@@ -34,6 +34,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
     private boolean playedOnce, shuffle = false;
     private List<Integer> previouslyPlayed;
     private int index = 0;
+    private boolean isPlayingPlaylist;
     private MediaSession mediaSession;
     private NotificationCompat.Builder mBuilder;
     private IBinder mBinder = new LocalBinder();
@@ -67,6 +68,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         intentFilter.addAction("PLAY_PREVIOUS");
         intentFilter.addAction("SHUFFLE");
         intentFilter.addAction("SORT_TYPE");
+        intentFilter.addAction("PLAY_PLAYLIST");
         getApplicationContext().registerReceiver(notificationReceiver, intentFilter);
         return mBinder;
     }
@@ -97,15 +99,20 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
     }
 
     public void setSongsList(ArrayList<Song> songsList) {
-        this.songsList = songsList;
-    }
-
-    public int getSongIterator() {
-        return songIterator;
+        this.songsList.clear();
+        this.songsList.addAll(songsList);
     }
 
     public void setSongIterator(int songIterator) {
         this.songIterator = songIterator;
+    }
+
+    public boolean isPlayingPlaylist() {
+        return isPlayingPlaylist;
+    }
+
+    public void setPlayingPlaylist(boolean playingPlaylist) {
+        isPlayingPlaylist = playingPlaylist;
     }
 
     //Load song and start playback
@@ -123,10 +130,13 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         } catch (IOException e1) {
             e1.printStackTrace();
         }
+        playedOnce = true;
         Intent refreshBar = new Intent("REFRESH");
         sendBroadcast(refreshBar);
-        playedOnce = true;
         updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
+        // refresh fragment
+        UpdateProgressBar updateProgressBar = new UpdateProgressBar(songsList.get(songIterator).getSongName(), songsList.get(songIterator).getArtistName());
+        updateProgressBar.start();
     }
 
     @Override
@@ -185,9 +195,9 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         mBuilder.setOngoing(mediaPlayer.isPlaying());
         NotificationManagerCompat mNotificationManager = NotificationManagerCompat.from(this);
         mNotificationManager.notify(1337, mBuilder.build());
-        if(mediaPlayer.isPlaying()){
+        if (mediaPlayer.isPlaying()) {
             startForeground(1337, mBuilder.build());
-        } else{
+        } else {
             stopForeground(false);
         }
 
@@ -203,13 +213,18 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                     case "PLAY_NEXT":
                         nextSong();
                         loadMedia(songsList.get(songIterator).getSongID());
+                        Log.d("ddd", "controller is working");
                         break;
                     case "PAUSE":
                         if (mediaPlayer.isPlaying()) {
                             mediaPlayer.pause();
+                            sendBroadcast(new Intent("ICON_PAUSE"));
                             updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
                         } else {
                             mediaPlayer.start();
+                            UpdateProgressBar updateProgressBar = new UpdateProgressBar(true);
+                            updateProgressBar.start();
+                            sendBroadcast(new Intent("ICON_RESUME"));
                             updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
                         }
                         break;
@@ -218,22 +233,21 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                         loadMedia(songsList.get(songIterator).getSongID());
                         break;
                     case AudioManager.ACTION_AUDIO_BECOMING_NOISY:
-                        mediaPlayer.start();
+                        mediaPlayer.pause();
                         break;
                     case "SHUFFLE":
                         setShuffle(intent.getBooleanExtra("ShuffleBoolean", false));
                         randomSong();
                         removeHistory();
                         break;
-                    case "SORT_TYPE":
-                        songsList.clear();
-                        if(intent.getIntExtra("SORT", -1) == 0){
-                            FillSongList.fillSongList(MediaPlayerHolder.this, 0);
-                        } else if(intent.getIntExtra("SORT", -1) == 1){
-                            FillSongList.fillSongList(MediaPlayerHolder.this, 1);
-                        }
-                        break;
-
+                    case "PLAY_PLAYLIST":
+                        int iterator = intent.getIntExtra("PLAYLIST_ITERATOR", 0);
+                        setSongsList(intent.<Song>getParcelableArrayListExtra("PLAYLIST"));
+                        setSongIterator(iterator);
+                        previouslyPlayed.clear();
+                        loadMedia(songsList.get(iterator).getSongID());
+                        previouslyPlayed.add(iterator);
+                        isPlayingPlaylist = true;
                 }
             } catch (Exception e) {
 
@@ -255,20 +269,19 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                 previouslyPlayed.add(songIterator);
                 index = previouslyPlayed.size() - 1;
             }
-        } else if(songIterator < songsList.size()-1){
+        } else if (songIterator < songsList.size() - 1) {
             songIterator++;
         } else {
             songIterator = 0;
         }
     }
 
+    //TODO: save all previously played songs
     void previousSong() {
         if (shuffle) {
             if (index > 0) {
-                Log.d("ddd", "" + index);
                 index--;
                 songIterator = previouslyPlayed.get(index);
-                Log.d("ddd", "" + index);
             } else {
                 Random r = new Random();
                 songIterator = r.nextInt(songsList.size());
@@ -293,5 +306,46 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         previouslyPlayed.add(songIterator);
         long id = songsList.get(songIterator).getSongID();
         loadMedia(id);
+    }
+
+    class UpdateProgressBar extends Thread {
+
+        private String songName;
+        private String artistName;
+        private boolean isResumed;
+
+        UpdateProgressBar(String songName, String artistName) {
+            this.songName = songName;
+            this.artistName = artistName;
+            this.isResumed = false;
+        }
+
+        UpdateProgressBar(boolean isResumed) {
+            this.isResumed = isResumed;
+        }
+
+        @Override
+        public void run() {
+            sendBroadcast(new Intent("ICON_RESUME"));
+            if (!isResumed) {
+                Intent songData = new Intent("SONG_DATA");
+                songData.putExtra("SONG_NAME", songName);
+                songData.putExtra("ARTIST_NAME", artistName);
+                sendBroadcast(songData);
+            }
+            while (mediaPlayer.isPlaying()) {
+                int songPosition = mediaPlayer.getCurrentPosition();
+                Intent intent = new Intent("PROGRESS");
+                intent.putExtra("TIME", songPosition);
+                intent.putExtra("TOTAL_DURATION", mediaPlayer.getDuration());
+                sendBroadcast(intent);
+                try {
+                    Thread.sleep(400);
+                } catch (InterruptedException e) {
+
+                }
+            }
+            sendBroadcast(new Intent("ICON_PAUSE"));
+        }
     }
 }
