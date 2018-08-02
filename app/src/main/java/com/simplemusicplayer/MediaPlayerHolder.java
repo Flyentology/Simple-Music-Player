@@ -255,6 +255,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         }
     }
 
+    //TODO: allow to replay songs
     void nextSong() {
         if (shuffle) {
             if (index < 0) {

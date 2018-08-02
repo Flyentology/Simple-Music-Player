@@ -1,10 +1,13 @@
 package com.simplemusicplayer;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -35,6 +38,7 @@ public class PlaylistViewAdapter extends BaseAdapter {
 
     static class ViewHolder {
         protected TextView itemCount, songTitle, artistName;
+        protected ImageButton moreOptions;
     }
 
     @Override
@@ -47,9 +51,41 @@ public class PlaylistViewAdapter extends BaseAdapter {
             viewHolder.itemCount = view.findViewById(R.id.playlist_view_itemCount);
             viewHolder.songTitle = view.findViewById(R.id.playlist_view_songTitle);
             viewHolder.artistName = view.findViewById(R.id.playlist_view_artistName);
+            viewHolder.moreOptions = view.findViewById(R.id.moreOptions);
             view.setTag(viewHolder);
+            viewHolder.moreOptions.setTag(i);
+        } else {
+            ((ViewHolder) view.getTag()).moreOptions.setTag(songs.get(i));
         }
+
         PlaylistViewAdapter.ViewHolder holder = (PlaylistViewAdapter.ViewHolder) view.getTag();
+
+        final int itt = i;
+        holder.moreOptions.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+                builder.setTitle(songs.get(itt).getSongName())
+                        .
+                        .setItems(R.array.edit_song_dialog, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int which) {
+                                switch (which){
+                                    case 0:
+                                        break;
+                                    case 1:
+                                        songs.remove(itt);
+                                        notifyDataSetChanged();
+                                        break;
+                                    case 2:
+                                        break;
+                                }
+                            }
+                        });
+                AlertDialog dialog = builder.create();
+                dialog.show();
+            }
+        });
 
         if (i < 10) {
             holder.itemCount.setText(String.format("%02d", (i + 1)));

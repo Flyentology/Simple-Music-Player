@@ -169,7 +169,6 @@ public class PlaylistActivity extends AppCompatActivity {
     }
 
     public void writeJSON(ArrayList<Playlist> playlists) {
-
         SharedPreferences mSettings = getSharedPreferences("Playlists", Context.MODE_PRIVATE);
         SharedPreferences.Editor mEditor = mSettings.edit();
         Type type = new TypeToken<ArrayList<Playlist>>() {
@@ -183,7 +182,6 @@ public class PlaylistActivity extends AppCompatActivity {
     }
 
     public ArrayList<Playlist> readJSON() {
-
         SharedPreferences mSettings = getSharedPreferences("Playlists", Context.MODE_PRIVATE);
         Type collectionType = new TypeToken<ArrayList<Playlist>>() {
         }.getType();

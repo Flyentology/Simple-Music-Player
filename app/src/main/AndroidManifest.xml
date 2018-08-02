@@ -52,6 +52,7 @@
             android:name=".PlaylistViewActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme" />
+        <activity android:name=".PlaybackActivity"></activity>
     </application>
 
 </manifest>

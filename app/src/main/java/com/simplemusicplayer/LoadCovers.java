@@ -78,7 +78,7 @@ class LoadCovers extends Thread {
                     } else {
                         baseSongList.get(i).setCoverArt(songImage);
                         handler.obtainMessage(i).sendToTarget();
-                        break;
+                        return;
                     }
                 }
                 if (MainActivity.stopThreads.get()) {

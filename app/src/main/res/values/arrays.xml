@@ -4,4 +4,9 @@
         <item>By date</item>
         <item>By name</item>
     </string-array>
+    <string-array name="edit_song_dialog">
+        <item>Add to</item>
+        <item>Delete</item>
+        <item>Share</item>
+    </string-array>
 </resources>

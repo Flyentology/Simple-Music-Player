@@ -66,7 +66,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
             //wait for messages from each thread and refresh list
             public void handleMessage(android.os.Message msg) {
-                Log.d("ddd", "imhere");
                 switch (msg.what) {
                     case 0:
                         count++;
@@ -192,19 +191,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     };
 
     @Override
-    protected void onStart() {
-        super.onStart();
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
     }
 
     @Override
