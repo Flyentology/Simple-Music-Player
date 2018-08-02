@@ -33,6 +33,8 @@ import com.davemorrissey.labs.subscaleview.ImageSource;
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class PlaylistViewActivity extends AppCompatActivity {
 
@@ -91,8 +93,6 @@ public class PlaylistViewActivity extends AppCompatActivity {
         playlistView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                //TODO: stop playback if user deletes playlist
-                Log.d("ddd", "clicked");
                 Intent sendPlaylist = new Intent("PLAY_PLAYLIST");
                 sendPlaylist.putParcelableArrayListExtra("PLAYLIST", playlistSongs);
                 sendPlaylist.putExtra("PLAYLIST_ITERATOR", i);
@@ -119,6 +119,7 @@ public class PlaylistViewActivity extends AppCompatActivity {
                         .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
+                                sendBroadcast(new Intent("ABORT_PLAYBACK"));
                                 setResult(11);
                                 finish();
                             }
@@ -137,11 +138,9 @@ public class PlaylistViewActivity extends AppCompatActivity {
         mHandler = new Handler() {
             // Wait for message from thread
             public void handleMessage(android.os.Message msg) {
-                    // Assign bitmap to imageView
                     Bitmap cover = playlistSongs.get(msg.what).getCoverArt();
-                    coverArt.setImageBitmap(cover);
-                    // Create cropped clone of existing bitmap
-                    Bitmap clone = Bitmap.createBitmap(cover, 20, 20, 100, 100);
+                    coverArt.setImageBitmap(cover); // Assign bitmap to imageView
+                    Bitmap clone = Bitmap.createBitmap(cover, 20, 20, 100, 100); // Create cropped clone of existing bitmap
                     // Prepare RenderScript and script to blur cloned bitmap
                     RenderScript renderScript = RenderScript.create(PlaylistViewActivity.this);
                     final Allocation input = Allocation.createFromBitmap(renderScript, clone);
@@ -174,9 +173,21 @@ public class PlaylistViewActivity extends AppCompatActivity {
         switch (requestCode) {
             case RECEIVE_SONGS: {
                 if (resultCode == Activity.RESULT_OK) {
-                    //TODO: check if the songs aren't already on the list
+                    /*
+                     * Get songs from AddSongsActivity, convert them to linkedHashSet
+                     * check if they don't already exist in current playlist
+                     * add all missing songs
+                     */
                     ArrayList<Song> temporaryList = data.getParcelableArrayListExtra("SONGS_TO_ADD");
-                    playlistSongs.addAll(temporaryList);
+                    ArrayList<Song> duplicates = new ArrayList<>();
+                    Set<Song> songsToAdd = new LinkedHashSet<>(temporaryList);
+                    for(Song song : playlistSongs){
+                        if(songsToAdd.contains(song)){
+                            duplicates.add(song);
+                        }
+                    }
+                    songsToAdd.removeAll(duplicates);
+                    playlistSongs.addAll(songsToAdd);
                     LoadCovers loadCovers = new LoadCovers(playlistSongs, mHandler, 0, playlistSongs.size(), 200, 200, false);
                     loadCovers.start();
                     playlistAdapter.notifyDataSetChanged();

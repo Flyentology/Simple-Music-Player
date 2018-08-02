@@ -4,6 +4,8 @@ import android.graphics.Bitmap;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.util.Objects;
+
 
 public class Song implements Parcelable {
 
@@ -109,6 +111,20 @@ public class Song implements Parcelable {
         dest.writeString(album);
         dest.writeLong(songID);
         dest.writeString(path);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Song song = (Song) o;
+        return songID == song.songID;
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(songID);
     }
 }
 

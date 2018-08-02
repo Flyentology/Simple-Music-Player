@@ -69,6 +69,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         intentFilter.addAction("SHUFFLE");
         intentFilter.addAction("SORT_TYPE");
         intentFilter.addAction("PLAY_PLAYLIST");
+        intentFilter.addAction("ABORT_PLAYBACK");
         getApplicationContext().registerReceiver(notificationReceiver, intentFilter);
         return mBinder;
     }
@@ -248,6 +249,12 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                         loadMedia(songsList.get(iterator).getSongID());
                         previouslyPlayed.add(iterator);
                         isPlayingPlaylist = true;
+                        break;
+                    case "ABORT_PLAYBACK":
+                        mediaPlayer.stop();
+                        removeHistory();
+                        songsList = FillSongList.fillSongList(getApplicationContext(), 0);
+                        setSongIterator(0);
                 }
             } catch (Exception e) {
 

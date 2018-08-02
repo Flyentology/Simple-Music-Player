@@ -60,13 +60,12 @@ public class PlaylistViewAdapter extends BaseAdapter {
 
         PlaylistViewAdapter.ViewHolder holder = (PlaylistViewAdapter.ViewHolder) view.getTag();
 
-        final int itt = i;
+        final int viewPosition = i;
         holder.moreOptions.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
-                builder.setTitle(songs.get(itt).getSongName())
-                        .
+                builder.setTitle(songs.get(viewPosition).getSongName())
                         .setItems(R.array.edit_song_dialog, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int which) {
@@ -74,7 +73,7 @@ public class PlaylistViewAdapter extends BaseAdapter {
                                     case 0:
                                         break;
                                     case 1:
-                                        songs.remove(itt);
+                                        songs.remove(viewPosition);
                                         notifyDataSetChanged();
                                         break;
                                     case 2:

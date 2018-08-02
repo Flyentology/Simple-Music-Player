@@ -51,17 +51,20 @@
         app:layout_constraintBottom_toTopOf="@+id/pause_playback_activity"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageButton2" />
+        app:layout_constraintTop_toBottomOf="@+id/playback_type" />
 
     <ImageButton
         android:id="@+id/pause_playback_activity"
         android:layout_width="54dp"
         android:layout_height="52dp"
         android:layout_marginBottom="8dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginStart="8dp"
         android:src="@drawable/ic_pause"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/playNext_playback_activity"
-        app:layout_constraintTop_toBottomOf="@id/seekBar_playback_activity"/>
+        app:layout_constraintStart_toEndOf="@+id/playPrevious_playback_activity"
+        app:layout_constraintTop_toBottomOf="@id/seekBar_playback_activity" />
 
     <ImageButton
         android:id="@+id/playNext_playback_activity"
@@ -88,9 +91,9 @@
         app:layout_constraintTop_toBottomOf="@+id/seekBar_playback_activity" />
 
     <ImageButton
-        android:id="@+id/imageButton2"
+        android:id="@+id/playback_type"
         android:layout_width="wrap_content"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:src="@drawable/ic_repeat"

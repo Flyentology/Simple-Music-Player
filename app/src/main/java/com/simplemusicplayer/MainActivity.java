@@ -63,7 +63,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
         mHandler = new Handler() {
             int count = 0;
-
             //wait for messages from each thread and refresh list
             public void handleMessage(android.os.Message msg) {
                 switch (msg.what) {
@@ -351,7 +350,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
     private void startThreads() {
         int chunkSize = 100;
-
         for (int i = 0; i < songsListView.size(); i += chunkSize) {
             LoadCovers loadCovers = new LoadCovers(songsListView, mHandler, i, Math.min(i + chunkSize, songsListView.size()), 90, 90, true);
             loadCovers.start();
