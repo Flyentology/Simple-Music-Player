@@ -1,4 +1,4 @@
-package com.simplemusicplayer;
+package com.simplemusicplayer.adapters;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -9,6 +9,9 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageButton;
 import android.widget.TextView;
+
+import com.simplemusicplayer.R;
+import com.simplemusicplayer.models.Song;
 
 import java.util.ArrayList;
 

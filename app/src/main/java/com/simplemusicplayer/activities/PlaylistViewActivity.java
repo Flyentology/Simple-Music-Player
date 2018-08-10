@@ -1,4 +1,4 @@
-package com.simplemusicplayer;
+package com.simplemusicplayer.activities;
 
 import android.app.Activity;
 import android.app.FragmentManager;
@@ -6,7 +6,6 @@ import android.app.FragmentTransaction;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.PointF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -19,7 +18,6 @@ import android.renderscript.ScriptIntrinsicBlur;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
@@ -29,8 +27,11 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.davemorrissey.labs.subscaleview.ImageSource;
-import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView;
+import com.simplemusicplayer.LoadCovers;
+import com.simplemusicplayer.fragments.MediaControllerFragment;
+import com.simplemusicplayer.adapters.PlaylistViewAdapter;
+import com.simplemusicplayer.R;
+import com.simplemusicplayer.models.Song;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -197,3 +198,5 @@ public class PlaylistViewActivity extends AppCompatActivity {
     }
 
 }
+
+//TODO: save playlist after adding songs

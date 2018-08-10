@@ -1,4 +1,4 @@
-package com.simplemusicplayer;
+package com.simplemusicplayer.adapters;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -10,6 +10,9 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.simplemusicplayer.R;
+import com.simplemusicplayer.models.Song;
 
 import java.util.ArrayList;
 

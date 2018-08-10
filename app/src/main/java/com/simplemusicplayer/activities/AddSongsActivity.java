@@ -1,10 +1,15 @@
-package com.simplemusicplayer;
+package com.simplemusicplayer.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ListView;
+
+import com.simplemusicplayer.FillSongList;
+import com.simplemusicplayer.R;
+import com.simplemusicplayer.models.Song;
+import com.simplemusicplayer.adapters.SongListAdapter;
 
 import java.util.ArrayList;
 

@@ -1,4 +1,4 @@
-package com.simplemusicplayer;
+package com.simplemusicplayer.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -8,6 +8,9 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.simplemusicplayer.models.Playlist;
+import com.simplemusicplayer.R;
+
 import java.util.ArrayList;
 
 public class PlaylistAdapter extends BaseAdapter {
@@ -15,7 +18,7 @@ public class PlaylistAdapter extends BaseAdapter {
     private ArrayList<Playlist> playlists;
     private Context mContext;
 
-    PlaylistAdapter(Context context, ArrayList<Playlist> playlists) {
+    public PlaylistAdapter(Context context, ArrayList<Playlist> playlists) {
         this.playlists = playlists;
         this.mContext = context;
     }

@@ -18,23 +18,12 @@
                                 <PersistentState>
                                   <option name="children">
                                     <map>
-                                      <entry key="clipArt">
-                                        <value>
-                                          <PersistentState>
-                                            <option name="values">
-                                              <map>
-                                                <entry key="paddingPercent" value="30" />
-                                              </map>
-                                            </option>
-                                          </PersistentState>
-                                        </value>
-                                      </entry>
                                       <entry key="clipartAsset">
                                         <value>
                                           <PersistentState>
                                             <option name="values">
                                               <map>
-                                                <entry key="url" value="jar:file:/snap/android-studio/51/android-studio/plugins/android/lib/android.jar!/images/material_design_icons/av/ic_repeat_one_black_24dp.xml" />
+                                                <entry key="url" value="jar:file:/snap/android-studio/51/android-studio/plugins/android/lib/android.jar!/images/material_design_icons/av/ic_skip_previous_black_24dp.xml" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -67,7 +56,7 @@
                                   <option name="values">
                                     <map>
                                       <entry key="imageAsset" value="$USER_HOME$/E:\Download\ic_shuffle.png" />
-                                      <entry key="outputName" value="ic_repeat_more" />
+                                      <entry key="outputName" value="ic_play_previous_dark" />
                                     </map>
                                   </option>
                                 </PersistentState>

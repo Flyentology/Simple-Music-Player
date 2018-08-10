@@ -13,7 +13,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         <activity
-            android:name=".MainActivity"
+            android:name=".activities.MainActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme"
             android:windowSoftInputMode="adjustResize">
@@ -28,31 +28,31 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".PlaylistActivity"
+            android:name=".activities.PlaylistActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme" />
         <activity
-            android:name=".LastPlayedActivity"
+            android:name=".activities.LastPlayedActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme" />
         <activity
-            android:name=".FavoritesActivity"
+            android:name=".activities.FavoritesActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme" />
 
         <service
-            android:name=".MediaPlayerHolder"
+            android:name=".services.MediaPlayerHolder"
             android:enabled="true" />
 
         <activity
-            android:name=".AddSongsActivity"
+            android:name=".activities.AddSongsActivity"
             android:label="@string/title_activity_add_songs"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
         <activity
-            android:name=".PlaylistViewActivity"
+            android:name=".activities.PlaylistViewActivity"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme" />
-        <activity android:name=".PlaybackActivity"></activity>
+        <activity android:name=".activities.PlaybackActivity"></activity>
     </application>
 
 </manifest>

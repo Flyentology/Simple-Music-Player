@@ -4,7 +4,7 @@
     <string name="channel_description" translatable="false">Used for notifications</string>
     <string name="action_shuffle" translatable="false">Shuffle</string>
     <string name="search_title">Search</string>
-    <string name="last_played">Last Played</string>
+    <string name="last_played">Last played</string>
     <string name="favorites">Favorites</string>
     <string name="playlists">Playlists</string>
     <string name="current_playlists">Your current playlists</string>

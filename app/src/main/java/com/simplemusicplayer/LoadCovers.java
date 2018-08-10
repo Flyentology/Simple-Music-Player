@@ -5,10 +5,14 @@ import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Handler;
 
+import com.simplemusicplayer.activities.MainActivity;
+import com.simplemusicplayer.models.Playlist;
+import com.simplemusicplayer.models.Song;
+
 import java.util.ArrayList;
 
 
-class LoadCovers extends Thread {
+public class LoadCovers extends Thread {
 
     private int initialValue;
     private int finalValue;
@@ -19,7 +23,7 @@ class LoadCovers extends Thread {
     private boolean loadMultipleCovers;
     private Playlist playlist;
 
-    LoadCovers(ArrayList<Song> baseSongList, Handler handler, int initialValue, int finalValue, int desiredWidth, int desiredHeight, boolean loadMultipleCovers) {
+    public LoadCovers(ArrayList<Song> baseSongList, Handler handler, int initialValue, int finalValue, int desiredWidth, int desiredHeight, boolean loadMultipleCovers) {
         this.baseSongList = baseSongList;
         this.handler = handler;
         this.initialValue = initialValue;
@@ -29,8 +33,8 @@ class LoadCovers extends Thread {
         this.loadMultipleCovers = loadMultipleCovers;
     }
 
-    // Constructor for loading single image
-    LoadCovers(Handler handler, Playlist playlist, int desiredWidth, int desiredHeight) {
+    // Constructor for loading single playlist image
+    public LoadCovers(Handler handler, Playlist playlist, int desiredWidth, int desiredHeight) {
         this.handler = handler;
         this.baseSongList = playlist.getPlaylistSongs();
         this.playlist = playlist;

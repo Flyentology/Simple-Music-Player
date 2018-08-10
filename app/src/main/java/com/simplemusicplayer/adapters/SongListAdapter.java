@@ -1,4 +1,4 @@
-package com.simplemusicplayer;
+package com.simplemusicplayer.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -8,6 +8,9 @@ import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
+
+import com.simplemusicplayer.R;
+import com.simplemusicplayer.models.Song;
 
 import java.util.ArrayList;
 

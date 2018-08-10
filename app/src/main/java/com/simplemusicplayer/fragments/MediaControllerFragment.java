@@ -1,4 +1,4 @@
-package com.simplemusicplayer;
+package com.simplemusicplayer.fragments;
 
 import android.app.Fragment;
 import android.content.BroadcastReceiver;
@@ -10,9 +10,13 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import com.simplemusicplayer.R;
+import com.simplemusicplayer.activities.PlaybackActivity;
 
 public class MediaControllerFragment extends Fragment {
 
@@ -22,9 +26,16 @@ public class MediaControllerFragment extends Fragment {
     private TextView currentDuration, totalDuration;
     private ImageButton pauseButton;
     private ServiceReceiver serviceReceiver = new ServiceReceiver();
+    private SharedPreferences mSettings;
 
     public MediaControllerFragment() {
 
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mSettings = getActivity().getSharedPreferences("SONG_DATA", Context.MODE_PRIVATE);
     }
 
     @Override
@@ -45,6 +56,7 @@ public class MediaControllerFragment extends Fragment {
         ImageButton playPrevious = v.findViewById(R.id.playPrevious);
         pauseButton = v.findViewById(R.id.pause);
         pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_pause));
+        Button startPlaybackActivity = v.findViewById(R.id.start_playback_activity);
 
         songName = v.findViewById(R.id.songName);
         artistName = v.findViewById(R.id.nameOfArtist);
@@ -75,6 +87,13 @@ public class MediaControllerFragment extends Fragment {
                 getActivity().sendBroadcast(pause);
             }
         });
+
+        startPlaybackActivity.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(getActivity(), PlaybackActivity.class));
+            }
+        });
     }
 
     @Override
@@ -88,9 +107,20 @@ public class MediaControllerFragment extends Fragment {
         intentFilter.addAction("SONG_DATA");
         getActivity().registerReceiver(serviceReceiver, intentFilter);
 
-        SharedPreferences mSettings = getActivity().getSharedPreferences("TextView", Context.MODE_PRIVATE);
-        songName.setText(mSettings.getString("songName", ""));
-        artistName.setText(mSettings.getString("artistName", ""));
+        songName.setText(mSettings.getString("SONG_NAME", ""));
+        artistName.setText(mSettings.getString("ARTIST_NAME", ""));
+
+        // change icon to paused when user see's fragment again
+        if(mSettings.getBoolean("IS_PAUSED", false)){
+            pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_start));
+        } else {
+            pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_pause));
+        }
+        // retrieve song progress and set it again
+        playbackProgress.setProgress(mSettings.getInt("CURRENT_POSITION", 0));
+        playbackProgress.setMax(mSettings.getInt("TOTAL_DURATION", 0));
+        currentDuration.setText(calculateDuration(mSettings.getInt("CURRENT_POSITION", 0)));
+        totalDuration.setText(calculateDuration(mSettings.getInt("TOTAL_DURATION", 0)));
     }
 
     @Override
@@ -121,16 +151,8 @@ public class MediaControllerFragment extends Fragment {
                     pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_pause));
                     break;
                 case "SONG_DATA":
-                    String tempSongName = intent.getStringExtra("SONG_NAME");
-                    String tempArtistName = intent.getStringExtra("ARTIST_NAME");
-                    songName.setText(tempSongName);
-                    artistName.setText(tempArtistName);
-                    // Add song data to shared preferences
-                    SharedPreferences mSettings = getActivity().getSharedPreferences("TextView", Context.MODE_PRIVATE);
-                    SharedPreferences.Editor mEditor = mSettings.edit();
-                    mEditor.putString("songName", tempSongName);
-                    mEditor.putString("artistName", tempArtistName);
-                    mEditor.apply();
+                    songName.setText(mSettings.getString("SONG_NAME", ""));
+                    artistName.setText(mSettings.getString("ARTIST_NAME", ""));
                     break;
             }
         }

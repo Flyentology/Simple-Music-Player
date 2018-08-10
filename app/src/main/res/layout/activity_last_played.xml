@@ -4,6 +4,36 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".LastPlayedActivity">
+    android:fitsSystemWindows="true"
+    tools:context=".activities.LastPlayedActivity">
 
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/lastPlayed_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/colorPrimaryDark"
+        android:theme="@style/Theme.AppCompat.NoActionBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ListView
+        android:id="@+id/lastPlayed_songsList"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        app:layout_constraintBottom_toTopOf="@id/lastPlayed_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/lastPlayed_toolbar" />
+
+    <FrameLayout
+        android:id="@+id/lastPlayed_container"
+        android:layout_width="match_parent"
+        android:layout_height="75dp"
+        android:layout_marginBottom="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/lastPlayed_songsList" />
 </android.support.constraint.ConstraintLayout>

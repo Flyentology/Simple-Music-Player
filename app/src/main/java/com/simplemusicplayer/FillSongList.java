@@ -6,6 +6,8 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.provider.MediaStore;
 
+import com.simplemusicplayer.models.Song;
+
 import java.util.ArrayList;
 
 public class FillSongList {

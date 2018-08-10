@@ -4,99 +4,114 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".PlaybackActivity">
+    tools:context=".activities.PlaybackActivity">
 
     <ImageView
-        android:id="@+id/imageView"
+        android:id="@+id/viewCover_playback"
         android:layout_width="310dp"
         android:layout_height="310dp"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="30dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.494"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/songName_activity_playback" />
+        app:layout_constraintTop_toBottomOf="@id/songName_activity_playback" />
 
     <TextView
         android:id="@+id/songName_activity_playback"
-        android:layout_width="299dp"
+        android:layout_width="280dp"
         android:layout_height="50dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginStart="0dp"
+        android:gravity="center"
+        android:textAlignment="center"
+        android:textSize="17sp"
+        android:textColor="@color/black"
+        app:layout_constraintBottom_toTopOf="@+id/viewCover_playback"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageButton
-        android:id="@+id/imageButton"
+        android:id="@+id/finish_playback_activity"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:background="@null"
         android:src="@drawable/ic_arrow_down"
-        app:layout_constraintEnd_toStartOf="@+id/songName_activity_playback"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <SeekBar
-        android:id="@+id/seekBar_playback_activity"
-        android:layout_width="280dp"
-        android:layout_height="20dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/pause_playback_activity"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/playback_type" />
-
-    <ImageButton
-        android:id="@+id/pause_playback_activity"
-        android:layout_width="54dp"
-        android:layout_height="52dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginStart="8dp"
-        android:src="@drawable/ic_pause"
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="0dp"
+        android:layout_marginTop="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/playNext_playback_activity"
-        app:layout_constraintStart_toEndOf="@+id/playPrevious_playback_activity"
-        app:layout_constraintTop_toBottomOf="@id/seekBar_playback_activity" />
+        app:layout_constraintTop_toBottomOf="@+id/viewCover_playback">
 
-    <ImageButton
-        android:id="@+id/playNext_playback_activity"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:src="@drawable/ic_play_next"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/seekBar_playback_activity" />
+        <SeekBar
+            android:id="@+id/seekBar_playback_activity"
+            android:layout_width="280dp"
+            android:layout_height="20dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:layout_marginBottom="40dp"
+            android:theme="@style/AppTheme" />
 
-    <ImageButton
-        android:id="@+id/playPrevious_playback_activity"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:src="@drawable/ic_play_previous"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@drawable/ic_pause"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/seekBar_playback_activity" />
+        <ImageButton
+            android:id="@+id/pause_playback_activity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="30dp"
+            android:layout_marginEnd="30dp"
+            android:layout_below="@id/seekBar_playback_activity"
+            android:layout_centerHorizontal="true"
+            android:background="@null"
+            android:src="@drawable/ic_pause_dark" />
 
-    <ImageButton
-        android:id="@+id/playback_type"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:src="@drawable/ic_repeat"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageView" />
+        <ImageButton
+            android:id="@+id/playNext_playback_activity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/seekBar_playback_activity"
+            android:layout_toEndOf="@id/pause_playback_activity"
+            android:background="@null"
+            android:src="@drawable/ic_play_next_dark" />
+
+        <ImageButton
+            android:id="@+id/playPrevious_playback_activity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="30dp"
+            android:layout_below="@id/seekBar_playback_activity"
+            android:layout_toStartOf="@id/pause_playback_activity"
+            android:background="@null"
+            android:src="@drawable/ic_play_previous_dark" />
+
+        <ImageButton
+            android:id="@+id/playback_type"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/seekBar_playback_activity"
+            android:layout_toStartOf="@id/playPrevious_playback_activity"
+            android:background="@null"
+            android:src="@drawable/ic_shuffle" />
+
+        <TextView
+            android:id="@+id/currentDuration_playback_activity"
+            android:layout_width="40dp"
+            android:layout_height="20dp"
+            android:layout_centerVertical="true"
+            android:gravity="end"
+            android:layout_toStartOf="@id/seekBar_playback_activity" />
+
+        <TextView
+            android:id="@+id/totalDuration_playback_activity"
+            android:layout_width="40dp"
+            android:layout_height="20dp"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@+id/seekBar_playback_activity" />
+    </RelativeLayout>
+
 </android.support.constraint.ConstraintLayout>

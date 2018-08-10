@@ -1,4 +1,4 @@
-package com.simplemusicplayer;
+package com.simplemusicplayer.models;
 
 import android.graphics.Bitmap;
 import android.os.Parcel;
