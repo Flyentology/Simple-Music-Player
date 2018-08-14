@@ -12,13 +12,14 @@ import com.simplemusicplayer.models.Playlist;
 import com.simplemusicplayer.R;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class PlaylistAdapter extends BaseAdapter {
 
-    private ArrayList<Playlist> playlists;
+    private List<Playlist> playlists;
     private Context mContext;
 
-    public PlaylistAdapter(Context context, ArrayList<Playlist> playlists) {
+    public PlaylistAdapter(Context context, List<Playlist> playlists) {
         this.playlists = playlists;
         this.mContext = context;
     }

@@ -9,14 +9,15 @@ import android.provider.MediaStore;
 import com.simplemusicplayer.models.Song;
 
 import java.util.ArrayList;
+import java.util.List;
 
-public class FillSongList {
+public class SongUtils {
 
-    public static ArrayList fillSongList(Context context, int sortOrder) {
-        ArrayList<Song> songsList = new ArrayList<>();
+    public static List<Song> fillSongList(Context context, int sortOrder) {
+        List<Song> songsList = new ArrayList<>();
+        Cursor cursor;
         ContentResolver contentResolver = context.getContentResolver();
         Uri uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI; //uri is basically URL, so points to a place in the phone where media is stored
-        Cursor cursor;
         //choose sort order
         if (sortOrder == 0) {
             cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.DATE_ADDED + " COLLATE NOCASE ASC"); //query for audio files on the phone
@@ -47,6 +48,5 @@ public class FillSongList {
             //cursors should be freed up after use
         }
         return songsList;
-
     }
 }

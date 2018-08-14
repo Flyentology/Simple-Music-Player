@@ -21,7 +21,7 @@ import android.support.v4.media.session.MediaSessionCompat;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.simplemusicplayer.FillSongList;
+import com.simplemusicplayer.SongUtils;
 import com.simplemusicplayer.R;
 import com.simplemusicplayer.activities.MainActivity;
 import com.simplemusicplayer.models.Song;
@@ -38,7 +38,7 @@ import java.util.Set;
 
 public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompletionListener, Serializable {
 
-    private ArrayList<Song> songsList = new ArrayList<>();
+    private List<Song> songsList = new ArrayList<>();
     private MediaPlayer mediaPlayer;
     private int songIterator = 0;
     private boolean playedOnce, shuffle = false;
@@ -47,8 +47,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
     private boolean isPlayingPlaylist;
     private boolean repeatSongs = false;
     private MediaSession mediaSession;
-    private NotificationCompat.Builder mBuilder;
-    private ArrayList<Song> lastPlayedSongs = new ArrayList<>();
+    private List<Song> lastPlayedSongs = new ArrayList<>();
     private Set<Song> songSet = new LinkedHashSet<>();
     private IBinder mBinder = new LocalBinder();
 
@@ -93,7 +92,6 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        createNotification("Pause");
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -113,7 +111,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         return songsList;
     }
 
-    public void setSongsList(ArrayList<Song> songsList) {
+    public void setSongsList(List<Song> songsList) {
         this.songsList.clear();
         this.songsList.addAll(songsList);
     }
@@ -148,7 +146,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         playedOnce = true;
         Intent refreshBar = new Intent("REFRESH");
         sendBroadcast(refreshBar);
-        updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
+        createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), R.drawable.ic_pause);
         // refresh fragment
         UpdateProgressBar updateProgressBar = new UpdateProgressBar(songsList.get(songIterator).getSongName(), songsList.get(songIterator).getArtistName(), songsList.get(songIterator).getPath());
         updateProgressBar.start();
@@ -174,8 +172,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         mediaPlayer.reset();
     }
 
-    //TODO: don't create notification on the beginning
-    public void createNotification(String currentState) {
+    public void createNotification(String songName, int icon) {
 
         // preparing to add notifications
         Intent intent = new Intent(this, MainActivity.class);
@@ -184,46 +181,30 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Intent playNextIntent = new Intent();
-        playNextIntent.setAction("PLAY_NEXT");
+        Intent playNextIntent = new Intent("PLAY_NEXT");
         PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this, 1, playNextIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Intent pauseIntent = new Intent();
-        pauseIntent.setAction("PAUSE");
+        Intent pauseIntent = new Intent("PAUSE");
         PendingIntent pausePendingIntent = PendingIntent.getBroadcast(this, 2, pauseIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Intent playPreviousIntent = new Intent();
-        playPreviousIntent.setAction("PLAY_PREVIOUS");
+        Intent playPreviousIntent = new Intent("PLAY_PREVIOUS");
         PendingIntent prevPendingIntent = PendingIntent.getBroadcast(this, 3, playPreviousIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        mBuilder = new NotificationCompat.Builder(this, "MusicID")
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "MusicID")
                 .setSmallIcon(R.drawable.ic_launcher_background) //notification icon
                 .setContentTitle("Simple Music Player")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setWhen(0)
+                .setContentText("Currently playing: " + songName)
+                .setOngoing(mediaPlayer.isPlaying())
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) //visible on locked screen
                 .addAction(R.drawable.ic_previous, "Previous", prevPendingIntent) // #0
-                .addAction(R.drawable.ic_pause, currentState, pausePendingIntent)  // #1
+                .addAction(icon, "Pause", pausePendingIntent)  // #1
                 .addAction(R.drawable.ic_next, "Next", nextPendingIntent)// #2
                 .setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle().setMediaSession(MediaSessionCompat.Token.fromToken(mediaSession.getSessionToken())))
                 .setContentIntent(pendingIntent); //on click go to app intent
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
         startForeground(1337, mBuilder.build());
         // notificationId is a unique int for each notification that you must define
-    }
-
-    public void updateNotification(String songName) {
-
-        mBuilder.setContentText("Currently playing: " + songName);
-        mBuilder.setOngoing(mediaPlayer.isPlaying());
-        NotificationManagerCompat mNotificationManager = NotificationManagerCompat.from(this);
-        mNotificationManager.notify(1337, mBuilder.build());
-        if (mediaPlayer.isPlaying()) {
-            startForeground(1337, mBuilder.build());
-        } else {
-            stopForeground(false);
-        }
-
     }
 
     public class NotificationReceiver extends BroadcastReceiver {
@@ -240,13 +221,14 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                     if (mediaPlayer.isPlaying()) {
                         mediaPlayer.pause();
                         sendBroadcast(new Intent("ICON_PAUSE"));
-                        updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
+                        createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), R.drawable.ic_start);
+                        stopForeground(false);
                     } else {
                         mediaPlayer.start();
                         UpdateProgressBar updateProgressBar = new UpdateProgressBar(songsList.get(songIterator).getSongName(), songsList.get(songIterator).getArtistName(), songsList.get(songIterator).getPath());
                         updateProgressBar.start();
                         sendBroadcast(new Intent("ICON_RESUME"));
-                        updateNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName());
+                        createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), R.drawable.ic_pause);
                     }
                     break;
                 case "PLAY_PREVIOUS":
@@ -255,6 +237,9 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                     break;
                 case AudioManager.ACTION_AUDIO_BECOMING_NOISY:
                     mediaPlayer.pause();
+                    sendBroadcast(new Intent("ICON_PAUSE"));
+                    createNotification(songsList.get(songIterator).getArtistName() + " " + songsList.get(songIterator).getSongName(), R.drawable.ic_start);
+                    stopForeground(false);
                     break;
                 case "SHUFFLE":
                     int playbackIcon;
@@ -295,7 +280,7 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
                 case "ABORT_PLAYBACK":
                     mediaPlayer.stop();
                     removeHistory();
-                    songsList = FillSongList.fillSongList(getApplicationContext(), 0);
+                    songsList = SongUtils.fillSongList(getApplicationContext(), 0);
                     setSongIterator(0);
                     break;
                 case "PROGRESS_UPDATE":
@@ -423,11 +408,11 @@ public class MediaPlayerHolder extends Service implements MediaPlayer.OnCompleti
      * Method that saves last played songs into JSON
      * in shared preferences under key LAST_PLAYED_LIST
      */
-    public void writeJSON(ArrayList<Song> songs) {
+    public void writeJSON(List<Song> songs) {
         Gson mGson = new Gson();
         SharedPreferences mSettings = getSharedPreferences("LAST_PLAYED_SONGS", Context.MODE_PRIVATE);
         SharedPreferences.Editor mEditor = mSettings.edit();
-        Type type = new TypeToken<ArrayList<Song>>() {
+        Type type = new TypeToken<List<Song>>() {
         }.getType();
         try {
             String writeValue = mGson.toJson(songs, type);

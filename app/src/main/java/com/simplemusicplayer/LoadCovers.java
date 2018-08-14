@@ -10,6 +10,7 @@ import com.simplemusicplayer.models.Playlist;
 import com.simplemusicplayer.models.Song;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 public class LoadCovers extends Thread {
@@ -18,12 +19,12 @@ public class LoadCovers extends Thread {
     private int finalValue;
     private int desiredWidth;
     private int desiredHeight;
-    private ArrayList<Song> baseSongList;
+    private List<Song> baseSongList;
     private Handler handler;
     private boolean loadMultipleCovers;
     private Playlist playlist;
 
-    public LoadCovers(ArrayList<Song> baseSongList, Handler handler, int initialValue, int finalValue, int desiredWidth, int desiredHeight, boolean loadMultipleCovers) {
+    public LoadCovers(List<Song> baseSongList, Handler handler, int initialValue, int finalValue, int desiredWidth, int desiredHeight, boolean loadMultipleCovers) {
         this.baseSongList = baseSongList;
         this.handler = handler;
         this.initialValue = initialValue;
@@ -53,7 +54,7 @@ public class LoadCovers extends Thread {
                 byte[] art = metaRetreiver.getEmbeddedPicture();
                 if (art != null) {
                     BitmapFactory.Options opt = new BitmapFactory.Options();
-                    opt.inJustDecodeBounds = true; //just check size of image
+                    opt.inJustDecodeBounds = true; //check size of image and don't decode it
                     BitmapFactory.decodeByteArray(art, 0, art.length, opt);
 
                     // assign values of image

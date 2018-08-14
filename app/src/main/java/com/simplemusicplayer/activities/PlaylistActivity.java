@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Parcelable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -33,15 +34,14 @@ import com.simplemusicplayer.models.Song;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.List;
 
 public class PlaylistActivity extends AppCompatActivity {
-    private ArrayList<Playlist> playlists = new ArrayList<>();
+    private List<Playlist> playlists = new ArrayList<>();
     private PlaylistAdapter playlistAdapter;
     private final int VIEW_PLAYLIST = 1;
     private int playlistPosition = 0;
     private Handler mHandler;
-    GsonBuilder gsonBuilder = new GsonBuilder();
-    Gson mGson = gsonBuilder.create();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +57,7 @@ public class PlaylistActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                writeJSON(playlists);
+                writeJSON(playlists,PlaylistActivity.this);
                 finish();
             }
         });
@@ -81,8 +81,8 @@ public class PlaylistActivity extends AppCompatActivity {
             }
         };
 
-        if (readJSON() != null) {
-            playlists.addAll(readJSON());
+        if (readJSON(PlaylistActivity.this) != null) {
+            playlists.addAll(readJSON(PlaylistActivity.this));
             for (Playlist playlist : playlists) {
                 LoadCovers loadCovers = new LoadCovers(mHandler, playlist, 130, 130);
                 loadCovers.start();
@@ -98,6 +98,8 @@ public class PlaylistActivity extends AppCompatActivity {
                 Intent viewPlaylist = new Intent(PlaylistActivity.this, PlaylistViewActivity.class);
                 viewPlaylist.putParcelableArrayListExtra("Playlist Content", playlists.get(position).getPlaylistSongs());
                 viewPlaylist.putExtra("PLAYLIST_NAME", playlists.get(position).getName());
+                viewPlaylist.putParcelableArrayListExtra("PLAYLISTS", (ArrayList<? extends Parcelable>) playlists);
+                viewPlaylist.putExtra("PLAYLIST_INDEX", position);
                 startActivityForResult(viewPlaylist, VIEW_PLAYLIST);
             }
         });
@@ -135,6 +137,7 @@ public class PlaylistActivity extends AppCompatActivity {
                                 String text = input.getText().toString();
                                 playlists.add(new Playlist(text));
                                 playlistAdapter.notifyDataSetChanged();
+                                writeJSON(playlists, PlaylistActivity.this);
                             }
                         });
                 builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -156,28 +159,29 @@ public class PlaylistActivity extends AppCompatActivity {
         switch (requestCode) {
             case VIEW_PLAYLIST: {
                 if (resultCode == Activity.RESULT_OK) {
-                    ArrayList<Song> temporaryList = data.getParcelableArrayListExtra("CURRENT_PLAYLIST");
-                    playlists.get(playlistPosition).getPlaylistSongs().clear();
-                    playlists.get(playlistPosition).getPlaylistSongs().addAll(temporaryList);
+                    playlists.clear();
+                    playlists.addAll(readJSON(PlaylistActivity.this));
                     if (playlists.get(playlistPosition).getPlaylistArt() == null) {
                         LoadCovers loadCovers = new LoadCovers(mHandler, playlists.get(playlistPosition), 130, 130);
                         loadCovers.start();
                     }
-                    writeJSON(playlists);
+                    writeJSON(playlists, PlaylistActivity.this);
                     playlistAdapter.notifyDataSetChanged();
                 } else if (resultCode == 11) {
                     playlists.remove(playlistPosition);
-                    writeJSON(playlists);
+                    writeJSON(playlists, PlaylistActivity.this);
                     playlistAdapter.notifyDataSetChanged();
                 }
             }
         }
     }
 
-    public void writeJSON(ArrayList<Playlist> playlists) {
-        SharedPreferences mSettings = getSharedPreferences("Playlists", Context.MODE_PRIVATE);
+    public static void writeJSON(List<Playlist> playlists, Context context) {
+        SharedPreferences mSettings = context.getSharedPreferences("Playlists", Context.MODE_PRIVATE);
         SharedPreferences.Editor mEditor = mSettings.edit();
-        Type type = new TypeToken<ArrayList<Playlist>>() {
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        Gson mGson = gsonBuilder.create();
+        Type type = new TypeToken<List<Playlist>>() {
         }.getType();
         try {
             String writeValue = mGson.toJson(playlists, type);
@@ -187,9 +191,11 @@ public class PlaylistActivity extends AppCompatActivity {
         }
     }
 
-    public ArrayList<Playlist> readJSON() {
-        SharedPreferences mSettings = getSharedPreferences("Playlists", Context.MODE_PRIVATE);
-        Type collectionType = new TypeToken<ArrayList<Playlist>>() {
+    public static List<Playlist> readJSON(Context context) {
+        SharedPreferences mSettings = context.getSharedPreferences("Playlists", Context.MODE_PRIVATE);
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        Gson mGson = gsonBuilder.create();
+        Type collectionType = new TypeToken<List<Playlist>>() {
         }.getType();
         String loadValue = mSettings.getString("Playlists", null);
         return mGson.fromJson(loadValue, collectionType);

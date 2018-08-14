@@ -31,6 +31,7 @@ import com.simplemusicplayer.LoadCovers;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
 import com.simplemusicplayer.adapters.PlaylistViewAdapter;
 import com.simplemusicplayer.R;
+import com.simplemusicplayer.models.Playlist;
 import com.simplemusicplayer.models.Song;
 
 import java.util.ArrayList;
@@ -39,12 +40,14 @@ import java.util.Set;
 
 public class PlaylistViewActivity extends AppCompatActivity {
 
-    private ArrayList<Song> playlistSongs = new ArrayList<>();
+    private ArrayList<Song> playlistSongs;
     private final int RECEIVE_SONGS = 1;
     private PlaylistViewAdapter playlistAdapter;
     private ImageView coverArt;
     private Handler mHandler;
     private RelativeLayout relativeLayout;
+    private int playlistIndex;
+    private ArrayList<Playlist> playlists;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,11 +58,15 @@ public class PlaylistViewActivity extends AppCompatActivity {
         coverArt = findViewById(R.id.viewCover);
         //add songs that already are in the playlist
         Intent intent = getIntent();
-        ArrayList<Song> list = intent.getParcelableArrayListExtra("Playlist Content");
-        playlistSongs.addAll(list);
+
+        playlistIndex = intent.getIntExtra("PLAYLIST_INDEX", 0);
+        playlists = intent.getParcelableArrayListExtra("PLAYLISTS");
+        playlistSongs = playlists.get(playlistIndex).getPlaylistSongs();
+
+
 
         ListView playlistView = findViewById(R.id.playlistSongs);
-        playlistAdapter = new PlaylistViewAdapter(this, playlistSongs);
+        playlistAdapter = new PlaylistViewAdapter(this, playlists.get(playlistIndex).getPlaylistSongs(), playlists);
         playlistView.setAdapter(playlistAdapter);
 
         Toolbar toolbar = findViewById(R.id.playlist_view_toolbar);
@@ -70,18 +77,13 @@ public class PlaylistViewActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent resultIntent = new Intent();
-                resultIntent.putParcelableArrayListExtra("CURRENT_PLAYLIST", playlistSongs);
-                setResult(PlaylistViewActivity.RESULT_OK, resultIntent);
+                setResult(PlaylistViewActivity.RESULT_OK);
                 finish();
             }
         });
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-        }
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         TextView playlistTitle = findViewById(R.id.playlistTitle);
         playlistTitle.setText(intent.getStringExtra("PLAYLIST_NAME"));
 
@@ -139,6 +141,8 @@ public class PlaylistViewActivity extends AppCompatActivity {
         mHandler = new Handler() {
             // Wait for message from thread
             public void handleMessage(android.os.Message msg) {
+                // check if song of msg.what index has cover art to display
+                if (playlistSongs.get(msg.what).getCoverArt() != null) {
                     Bitmap cover = playlistSongs.get(msg.what).getCoverArt();
                     coverArt.setImageBitmap(cover); // Assign bitmap to imageView
                     Bitmap clone = Bitmap.createBitmap(cover, 20, 20, 100, 100); // Create cropped clone of existing bitmap
@@ -154,6 +158,10 @@ public class PlaylistViewActivity extends AppCompatActivity {
                     // Create drawable and assign it as background
                     Drawable drawable = new BitmapDrawable(getResources(), clone);
                     relativeLayout.setBackground(drawable);
+                } else {
+                    // put empty cover in image view
+                    coverArt.setImageDrawable(getDrawable(R.drawable.ic_empty_cover));
+                }
             }
         };
     }
@@ -166,6 +174,12 @@ public class PlaylistViewActivity extends AppCompatActivity {
             LoadCovers loadCovers = new LoadCovers(playlistSongs, mHandler, 0, playlistSongs.size(), 200, 200, false);
             loadCovers.start();
         }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        PlaylistActivity.writeJSON(playlists, PlaylistViewActivity.this);
     }
 
     @Override
@@ -182,13 +196,15 @@ public class PlaylistViewActivity extends AppCompatActivity {
                     ArrayList<Song> temporaryList = data.getParcelableArrayListExtra("SONGS_TO_ADD");
                     ArrayList<Song> duplicates = new ArrayList<>();
                     Set<Song> songsToAdd = new LinkedHashSet<>(temporaryList);
-                    for(Song song : playlistSongs){
-                        if(songsToAdd.contains(song)){
+                    for (Song song : playlistSongs) {
+                        if (songsToAdd.contains(song)) {
                             duplicates.add(song);
                         }
                     }
                     songsToAdd.removeAll(duplicates);
-                    playlistSongs.addAll(songsToAdd);
+                    playlists.get(playlistIndex).getPlaylistSongs().addAll(songsToAdd);
+                    // save playlists after adding song to one of them
+                    PlaylistActivity.writeJSON(playlists, PlaylistViewActivity.this);
                     LoadCovers loadCovers = new LoadCovers(playlistSongs, mHandler, 0, playlistSongs.size(), 200, 200, false);
                     loadCovers.start();
                     playlistAdapter.notifyDataSetChanged();
@@ -198,5 +214,3 @@ public class PlaylistViewActivity extends AppCompatActivity {
     }
 
 }
-
-//TODO: save playlist after adding songs

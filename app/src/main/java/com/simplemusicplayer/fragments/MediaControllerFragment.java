@@ -15,6 +15,7 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.devadvance.circularseekbar.CircularSeekBar;
 import com.simplemusicplayer.R;
 import com.simplemusicplayer.activities.PlaybackActivity;
 
@@ -22,7 +23,7 @@ public class MediaControllerFragment extends Fragment {
 
     private View v;
     private TextView songName, artistName;
-    private ProgressBar playbackProgress;
+    private CircularSeekBar playbackProgress;
     private TextView currentDuration, totalDuration;
     private ImageButton pauseButton;
     private ServiceReceiver serviceReceiver = new ServiceReceiver();
@@ -60,9 +61,9 @@ public class MediaControllerFragment extends Fragment {
 
         songName = v.findViewById(R.id.songName);
         artistName = v.findViewById(R.id.nameOfArtist);
-        totalDuration = v.findViewById(R.id.duration);
-        currentDuration = v.findViewById(R.id.currentDuration);
         playbackProgress = v.findViewById(R.id.progressBar);
+        playbackProgress.setPointerAlpha(100);
+        playbackProgress.setIsTouchEnabled(false);
 
         playNext.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -119,8 +120,8 @@ public class MediaControllerFragment extends Fragment {
         // retrieve song progress and set it again
         playbackProgress.setProgress(mSettings.getInt("CURRENT_POSITION", 0));
         playbackProgress.setMax(mSettings.getInt("TOTAL_DURATION", 0));
-        currentDuration.setText(calculateDuration(mSettings.getInt("CURRENT_POSITION", 0)));
-        totalDuration.setText(calculateDuration(mSettings.getInt("TOTAL_DURATION", 0)));
+        //currentDuration.setText(calculateDuration(mSettings.getInt("CURRENT_POSITION", 0)));
+        //totalDuration.setText(calculateDuration(mSettings.getInt("TOTAL_DURATION", 0)));
     }
 
     @Override
@@ -139,10 +140,8 @@ public class MediaControllerFragment extends Fragment {
                 case "PROGRESS":
                     int maxDuration = intent.getIntExtra("TOTAL_DURATION", 0);
                     playbackProgress.setMax(maxDuration);
-                    totalDuration.setText(calculateDuration(maxDuration));
                     int currentTime = intent.getIntExtra("TIME", 0);
                     playbackProgress.setProgress(currentTime);
-                    currentDuration.setText(calculateDuration(currentTime));
                     break;
                 case "ICON_PAUSE":
                     pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_start));
@@ -158,10 +157,10 @@ public class MediaControllerFragment extends Fragment {
         }
     }
 
-    private String calculateDuration(int duration) {
-        int currentDuration = duration / 1000;
-        int seconds = currentDuration % 60;
-        currentDuration /= 60;
-        return currentDuration + ":" + String.format("%02d", seconds);
-    }
+//    private String calculateDuration(int duration) {
+//        int currentDuration = duration / 1000;
+//        int seconds = currentDuration % 60;
+//        currentDuration /= 60;
+//        return currentDuration + ":" + String.format("%02d", seconds);
+//    }
 }

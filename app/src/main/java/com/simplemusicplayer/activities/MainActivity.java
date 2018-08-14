@@ -30,7 +30,7 @@ import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.Toast;
 
-import com.simplemusicplayer.FillSongList;
+import com.simplemusicplayer.SongUtils;
 import com.simplemusicplayer.LoadCovers;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
 import com.simplemusicplayer.services.MediaPlayerHolder;
@@ -40,6 +40,7 @@ import com.simplemusicplayer.adapters.SongAdapter;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -52,8 +53,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private static int whichSortType = 0;
     public static AtomicBoolean stopThreads = new AtomicBoolean(false);
     private SongAdapter songAdapter;
-    private ArrayList<Song> songsListView = new ArrayList<>();
-    private ArrayList<Song> baseSongList = new ArrayList<>();
+    private List<Song> songsListView = new ArrayList<>();
+    private List<Song> baseSongList = new ArrayList<>();
     private boolean mBound = false;
     public MediaPlayerHolder mediaPlayerHolder;
     private Handler mHandler;
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
             }
         } else {
-            baseSongList = FillSongList.fillSongList(this, 0);
+            baseSongList = SongUtils.fillSongList(this, 0);
             Intent intent = new Intent(this, MediaPlayerHolder.class);
             bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
             songAdapter = new SongAdapter(this, this, songsListView);
@@ -225,7 +226,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                         if (ContextCompat.checkSelfPermission(MainActivity.this,
                                 Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_DENIED) {
                             Toast.makeText(this, "permission granted", Toast.LENGTH_LONG).show();
-                            baseSongList = FillSongList.fillSongList(this, 0);
+                            baseSongList = SongUtils.fillSongList(this, 0);
                             Intent intent = new Intent(this, MediaPlayerHolder.class);
                             bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
                             songAdapter = new SongAdapter(this, this, songsListView);
@@ -327,7 +328,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                                     } else if (which == 1) {
                                         whichSortType = 1;
                                         baseSongList.clear();
-                                        baseSongList = FillSongList.fillSongList(MainActivity.this, whichSortType);
+                                        baseSongList = SongUtils.fillSongList(MainActivity.this, whichSortType);
                                         songsListView.addAll(baseSongList);
                                         stopThreads.set(false);
                                         startThreads();
@@ -337,7 +338,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                                     if (which == 0) {
                                         whichSortType = 0;
                                         baseSongList.clear();
-                                        baseSongList = FillSongList.fillSongList(MainActivity.this, whichSortType);
+                                        baseSongList = SongUtils.fillSongList(MainActivity.this, whichSortType);
                                         songsListView.addAll(baseSongList);
                                         stopThreads.set(false);
                                         startThreads();

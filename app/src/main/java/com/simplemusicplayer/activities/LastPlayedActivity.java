@@ -18,10 +18,12 @@ import com.google.gson.reflect.TypeToken;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
 import com.simplemusicplayer.adapters.PlaylistViewAdapter;
 import com.simplemusicplayer.R;
+import com.simplemusicplayer.models.Playlist;
 import com.simplemusicplayer.models.Song;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.List;
 
 public class LastPlayedActivity extends AppCompatActivity {
 
@@ -55,7 +57,7 @@ public class LastPlayedActivity extends AppCompatActivity {
 
         //setting up the adapter
         ListView listView = findViewById(R.id.lastPlayed_songsList);
-        lastPlayedAdapter = new PlaylistViewAdapter(this, songsList);
+        lastPlayedAdapter = new PlaylistViewAdapter(this, songsList, PlaylistActivity.readJSON(this));
         listView.setAdapter(lastPlayedAdapter);
 
     }
