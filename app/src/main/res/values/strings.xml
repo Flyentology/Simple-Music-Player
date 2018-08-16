@@ -17,4 +17,15 @@
     <string name="delete_playlist">Delete playlist</string>
     <string name="delete_playlist_message">Do you really want to delete current playlist?</string>
     <string name="add_to">Add to</string>
+    <string name="settings">Settings</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <string name="pref_sleep_audio_summary">Set time after which player will stop playing </string>
+    <string name="pref_sleep_audio_title">Sleep</string>
+    <string name="pref_headphones_title">Headphones \u0026 Audio effects</string>
+    <string name="pref_headphones_summary">Headphones \u0026 equalizer</string>
+    <string name="pref_headphones_control_title">Control headphones buttons</string>
+    <string name="pref_headphones_single_click">Single click</string>
+    <string name="pref_headphones_double_click">Double click</string>
+    <string name="pref_headphones_triple_click">Triple click</string>
 </resources>

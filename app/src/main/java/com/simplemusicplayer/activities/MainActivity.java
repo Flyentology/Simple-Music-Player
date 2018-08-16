@@ -13,16 +13,23 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
+import android.media.session.MediaController;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.RemoteException;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
+import android.support.v7.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -33,6 +40,7 @@ import android.widget.Toast;
 import com.simplemusicplayer.SongUtils;
 import com.simplemusicplayer.LoadCovers;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
+import com.simplemusicplayer.fragments.SettingsFragment;
 import com.simplemusicplayer.services.MediaPlayerHolder;
 import com.simplemusicplayer.R;
 import com.simplemusicplayer.models.Song;
@@ -71,6 +79,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
         mHandler = new Handler() {
             int count = 0;
+
             //wait for messages from each thread and refresh list
             public void handleMessage(android.os.Message msg) {
                 switch (msg.what) {
@@ -162,6 +171,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             }
         });
 
+        // set default values for sleep settings
+        PreferenceManager.setDefaultValues(this, R.xml.pref_settings, false);
     }
 
     //Binding service
@@ -182,6 +193,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             if (mediaPlayerHolder != null) {
                 startService(new Intent(MainActivity.this, MediaPlayerHolder.class)); //we start service to make it foreground and bound
                 mediaPlayerHolder.setSongsList(baseSongList);
+
                 // Set fragment
                 FragmentManager fragmentManager = getFragmentManager();
                 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
@@ -248,7 +260,11 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     public void onBackPressed() {
         //pressing back button makes app go background
-        moveTaskToBack(true);
+        //moveTaskToBack(true);
+        FragmentManager fragmentManager = getFragmentManager();
+        if (fragmentManager.getBackStackEntryCount() > 0) {
+            fragmentManager.popBackStackImmediate();
+        } else super.onBackPressed();
     }
 
     private void createNotificationChannel() {
@@ -261,7 +277,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             NotificationChannel channel = new NotificationChannel("MusicID", name, importance);
             channel.setDescription(description);
             // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
+            // or other notification behaviors after thisenter code here
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
@@ -277,6 +293,18 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         searchView.setSubmitButtonEnabled(true);
         searchView.setOnQueryTextListener(this);
         return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.settings:
+                getSupportFragmentManager().beginTransaction().replace(android.R.id.content, new SettingsFragment()).commit();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override

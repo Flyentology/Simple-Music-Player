@@ -24,6 +24,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class PlaylistViewAdapter extends BaseAdapter {
@@ -130,7 +131,7 @@ public class PlaylistViewAdapter extends BaseAdapter {
         });
 
         if (i < 10) {
-            holder.itemCount.setText(String.format("%02d", (i + 1)));
+            holder.itemCount.setText(String.format(Locale.US,"%02d", (i + 1)));
 
         } else {
             holder.itemCount.setText(String.valueOf(i + 1));

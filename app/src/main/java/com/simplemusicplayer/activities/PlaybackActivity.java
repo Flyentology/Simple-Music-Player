@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
+import android.media.session.MediaSession;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -20,6 +21,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.simplemusicplayer.R;
+
+import java.util.Locale;
 
 public class PlaybackActivity extends AppCompatActivity {
 
@@ -134,7 +137,7 @@ public class PlaybackActivity extends AppCompatActivity {
         setPlaybackType(playbackSettings.getInt("PLAYBACK_ICON", 0));
 
         // change icon to paused when user see's playback activity again
-        if(mSettings.getBoolean("IS_PAUSED", false)){
+        if (mSettings.getBoolean("IS_PAUSED", false)) {
             pauseButton.setImageDrawable(getDrawable(R.drawable.ic_start_dark));
         } else {
             pauseButton.setImageDrawable(getDrawable(R.drawable.ic_pause_dark));
@@ -231,7 +234,7 @@ public class PlaybackActivity extends AppCompatActivity {
         int currentDuration = duration / 1000;
         int seconds = currentDuration % 60;
         currentDuration /= 60;
-        return currentDuration + ":" + String.format("%02d", seconds);
+        return String.format(Locale.US, "%d:%02d", currentDuration, seconds);
     }
 
     private void setPlaybackType(int playbackIconType) {

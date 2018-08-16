@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:asp="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/pref_sleep_audio_title">
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="pref_sleep_audio"
+            android:summary="@string/pref_sleep_audio_summary"
+            android:title="@string/pref_sleep_audio_title" />
+        <SeekBarPreference
+            android:name="Title"
+            android:defaultValue="@integer/seekbar_default"
+            android:key="pref_seekbar_position"
+            android:max="@integer/seekbar_max"
+            asp:min="@integer/seekbar_min" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/pref_headphones_title">
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="pref_control_headphones"
+            android:title="@string/pref_headphones_control_title" />
+        <ListPreference
+            android:dependency="pref_control_headphones"
+            android:dialogTitle="@string/pref_headphones_single_click"
+            android:entries="@array/pref_click_functions"
+            android:entryValues="@array/pref_click_functions_values"
+            android:key="pref_single_click"
+            android:title="@string/pref_headphones_single_click" />
+        <ListPreference
+            android:dependency="pref_control_headphones"
+            android:dialogTitle="@string/pref_headphones_double_click"
+            android:entries="@array/pref_click_functions"
+            android:entryValues="@array/pref_click_functions_values"
+            android:key="pref_double_click"
+            android:title="@string/pref_headphones_double_click" />
+        <ListPreference
+            android:dependency="pref_control_headphones"
+            android:dialogTitle="@string/pref_headphones_triple_click"
+            android:entries="@array/pref_click_functions"
+            android:entryValues="@array/pref_click_functions_values"
+            android:key="pref_triple_click"
+            android:title="@string/pref_headphones_triple_click" />
+    </PreferenceCategory>
+</android.support.v7.preference.PreferenceScreen>

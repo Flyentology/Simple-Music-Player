@@ -12,7 +12,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.devadvance.circularseekbar.CircularSeekBar;
@@ -24,14 +23,9 @@ public class MediaControllerFragment extends Fragment {
     private View v;
     private TextView songName, artistName;
     private CircularSeekBar playbackProgress;
-    private TextView currentDuration, totalDuration;
     private ImageButton pauseButton;
     private ServiceReceiver serviceReceiver = new ServiceReceiver();
     private SharedPreferences mSettings;
-
-    public MediaControllerFragment() {
-
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -120,8 +114,6 @@ public class MediaControllerFragment extends Fragment {
         // retrieve song progress and set it again
         playbackProgress.setProgress(mSettings.getInt("CURRENT_POSITION", 0));
         playbackProgress.setMax(mSettings.getInt("TOTAL_DURATION", 0));
-        //currentDuration.setText(calculateDuration(mSettings.getInt("CURRENT_POSITION", 0)));
-        //totalDuration.setText(calculateDuration(mSettings.getInt("TOTAL_DURATION", 0)));
     }
 
     @Override
@@ -156,11 +148,4 @@ public class MediaControllerFragment extends Fragment {
             }
         }
     }
-
-//    private String calculateDuration(int duration) {
-//        int currentDuration = duration / 1000;
-//        int seconds = currentDuration % 60;
-//        currentDuration /= 60;
-//        return currentDuration + ":" + String.format("%02d", seconds);
-//    }
 }

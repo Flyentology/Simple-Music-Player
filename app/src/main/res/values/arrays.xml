@@ -9,4 +9,14 @@
         <item>Delete</item>
         <item>Share</item>
     </string-array>
+    <string-array name="pref_click_functions">
+        <item>Start/Pause</item>
+        <item>Next song</item>
+        <item>Previous song</item>
+    </string-array>
+    <string-array name="pref_click_functions_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
 </resources>
