@@ -13,7 +13,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
-import android.media.session.MediaController;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -21,7 +20,6 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -37,11 +35,12 @@ import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.Toast;
 
+import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.SongUtils;
 import com.simplemusicplayer.LoadCovers;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
 import com.simplemusicplayer.fragments.SettingsFragment;
-import com.simplemusicplayer.services.MediaPlayerHolder;
+import com.simplemusicplayer.services.MediaPlaybackService;
 import com.simplemusicplayer.R;
 import com.simplemusicplayer.models.Song;
 import com.simplemusicplayer.adapters.SongAdapter;
@@ -63,10 +62,25 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private SongAdapter songAdapter;
     private List<Song> songsListView = new ArrayList<>();
     private List<Song> baseSongList = new ArrayList<>();
-    private boolean mBound = false;
-    public MediaPlayerHolder mediaPlayerHolder;
     private Handler mHandler;
     private int threadCount = 0;
+
+    private static MediaBrowserCompat mMediaBrowserCompat;
+    private static MediaControllerCompat mMediaControllerCompat;
+
+    private MediaBrowserCompat.ConnectionCallback mMediaBrowserCompatConnectionCallback = new MediaBrowserCompat.ConnectionCallback() {
+
+        @Override
+        public void onConnected() {
+            super.onConnected();
+            try {
+                mMediaControllerCompat = new MediaControllerCompat(MainActivity.this, mMediaBrowserCompat.getSessionToken());
+                MediaControllerCompat.setMediaController(MainActivity.this, mMediaControllerCompat);
+            } catch (RemoteException e) {
+
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +89,19 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
         Toolbar myToolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
-        //getSupportActionBar().setDisplayShowTitleEnabled(false);
+
+        startService(new Intent(this, MediaPlaybackService.class));
+
+        mMediaBrowserCompat = new MediaBrowserCompat(MainActivity.this, new ComponentName(MainActivity.this, MediaPlaybackService.class),
+                mMediaBrowserCompatConnectionCallback, MainActivity.this.getIntent().getExtras());
+
+        mMediaBrowserCompat.connect();
+
+        FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        MediaControllerFragment mediaControllerFragment = new MediaControllerFragment();
+        fragmentTransaction.add(R.id.mediaControllerContainer, mediaControllerFragment);
+        fragmentTransaction.commit();
 
         mHandler = new Handler() {
             int count = 0;
@@ -105,7 +131,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         menuList.add(getString(R.string.playlists));
 
         songsList = findViewById(R.id.songsList);
-        songsList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 
         // runtime check for permission
         if (ContextCompat.checkSelfPermission(MainActivity.this,
@@ -121,8 +146,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             }
         } else {
             baseSongList = SongUtils.fillSongList(this, 0);
-            Intent intent = new Intent(this, MediaPlayerHolder.class);
-            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+            PlaybackLogic.setSongsList(baseSongList);
             songAdapter = new SongAdapter(this, this, songsListView);
             songsList.setAdapter(songAdapter);
             songsListView.addAll(baseSongList);
@@ -160,54 +184,24 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                         iterator = i;
                     }
                 }
-                if (mediaPlayerHolder.isPlayingPlaylist() || listChanged) {
-                    mediaPlayerHolder.setSongsList(baseSongList);
-                    mediaPlayerHolder.setPlayingPlaylist(false);
+
+                if (PlaybackLogic.isPlayingPlaylist() || listChanged) {
+                    PlaybackLogic.setSongsList(baseSongList);
+                    PlaybackLogic.setPlayingPlaylist(false);
                     listChanged = false;
                 }
-                mediaPlayerHolder.setSongIterator(iterator);
-                mediaPlayerHolder.loadMedia(songID);
-                mediaPlayerHolder.getPreviouslyPlayed().add(iterator);
+                PlaybackLogic.setSongIterator(iterator);
+                Bundle bundle = new Bundle();
+                bundle.putParcelable("SONG_TO_PLAY", baseSongList.get(iterator));
+                MediaControllerCompat.getMediaController(MainActivity.this).getTransportControls().playFromMediaId(String.valueOf(baseSongList.get(iterator).getSongID())
+                        , bundle);
+                PlaybackLogic.getPreviouslyPlayed().add(baseSongList.get(iterator));
             }
         });
-
         // set default values for sleep settings
         PreferenceManager.setDefaultValues(this, R.xml.pref_settings, false);
     }
 
-    //Binding service
-    ServiceConnection mConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
-            MediaPlayerHolder.LocalBinder binder = (MediaPlayerHolder.LocalBinder) service;
-            mediaPlayerHolder = binder.getService();
-            mBound = true;
-
-            /*
-            Bind service call is asynchronous so we start media controller after it's successfully
-            bound to our service class
-             */
-            if (mediaPlayerHolder != null) {
-                startService(new Intent(MainActivity.this, MediaPlayerHolder.class)); //we start service to make it foreground and bound
-                mediaPlayerHolder.setSongsList(baseSongList);
-
-                // Set fragment
-                FragmentManager fragmentManager = getFragmentManager();
-                FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                MediaControllerFragment mediaControllerFragment = new MediaControllerFragment();
-                fragmentTransaction.add(R.id.mediaControllerContainer, mediaControllerFragment);
-                fragmentTransaction.commit();
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
-        }
-    };
 
     @Override
     protected void onResume() {
@@ -218,14 +212,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (mediaPlayerHolder.getMediaPlayer() != null) {
-            mediaPlayerHolder.getMediaPlayer().release();
-        }
-        if (mBound) {
-            unbindService(mConnection);
-            stopService(new Intent(this, MediaPlayerHolder.class));
-            mBound = false;
-        }
 
     }
 
@@ -239,8 +225,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                                 Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_DENIED) {
                             Toast.makeText(this, "permission granted", Toast.LENGTH_LONG).show();
                             baseSongList = SongUtils.fillSongList(this, 0);
-                            Intent intent = new Intent(this, MediaPlayerHolder.class);
-                            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+                            PlaybackLogic.setSongsList(baseSongList);
                             songAdapter = new SongAdapter(this, this, songsListView);
                             songsList.setAdapter(songAdapter);
                             songsListView.addAll(baseSongList);
@@ -335,10 +320,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     public void onClick(View view) {
         if (view.getId() == R.id.action_shuffle || view.getId() == R.id.shuffle_text) {
             playShuffle = !playShuffle;
-            Intent shuffleIntent = new Intent("SHUFFLE");
-            shuffleIntent.putExtra("ShuffleBoolean", playShuffle);
-            shuffleIntent.putExtra("SHUFFLE_SONGS", 1);
-            sendBroadcast(shuffleIntent);
+            PlaybackLogic.setShuffle(playShuffle);
+            PlaybackLogic.removeHistory();
             Toast.makeText(MainActivity.this, "Shuffle is " + playShuffle, Toast.LENGTH_SHORT).show();
         } else if (view.getId() == R.id.action_sort) {
             //creating dialog to choose sort type

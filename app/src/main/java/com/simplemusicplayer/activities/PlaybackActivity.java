@@ -1,6 +1,7 @@
 package com.simplemusicplayer.activities;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -8,8 +9,13 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
+import android.media.session.MediaController;
 import android.media.session.MediaSession;
 import android.os.AsyncTask;
+import android.os.RemoteException;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -20,7 +26,9 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.R;
+import com.simplemusicplayer.services.MediaPlaybackService;
 
 import java.util.Locale;
 
@@ -32,7 +40,53 @@ public class PlaybackActivity extends AppCompatActivity {
     private SeekBar songProgress;
     private ServiceReceiver serviceReceiver;
     private SharedPreferences mSettings;
-    private int playbackIcon = 0;
+    private static int playbackIcon = 0;
+
+    private static final int STATE_PAUSED = 0;
+    private static final int STATE_PLAYING = 1;
+
+    private static int mCurrentState;
+
+    private static MediaBrowserCompat mMediaBrowserCompat;
+    private static MediaControllerCompat mMediaControllerCompat;
+
+    private MediaBrowserCompat.ConnectionCallback mMediaBrowserCompatConnectionCallback = new MediaBrowserCompat.ConnectionCallback() {
+
+        @Override
+        public void onConnected() {
+            super.onConnected();
+            try {
+                mMediaControllerCompat = new MediaControllerCompat(PlaybackActivity.this, mMediaBrowserCompat.getSessionToken());
+                MediaControllerCompat.setMediaController(PlaybackActivity.this, mMediaControllerCompat);
+            } catch (RemoteException e) {
+
+            }
+        }
+    };
+
+    private MediaControllerCompat.Callback mMediaControllerCompatCallback = new MediaControllerCompat.Callback() {
+
+        @Override
+        public void onPlaybackStateChanged(PlaybackStateCompat state) {
+            super.onPlaybackStateChanged(state);
+            if (state == null) {
+                return;
+            }
+
+            switch (state.getState()) {
+                case PlaybackStateCompat.STATE_PLAYING: {
+                    mCurrentState = STATE_PLAYING;
+                    pauseButton.setImageDrawable(getDrawable(R.drawable.ic_pause));
+                    break;
+                }
+                case PlaybackStateCompat.STATE_PAUSED: {
+                    mCurrentState = STATE_PAUSED;
+                    pauseButton.setImageDrawable(getDrawable(R.drawable.ic_start));
+                    break;
+                }
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +107,11 @@ public class PlaybackActivity extends AppCompatActivity {
         totalDuration = findViewById(R.id.totalDuration_playback_activity);
         currentDuration = findViewById(R.id.currentDuration_playback_activity);
 
+        mMediaBrowserCompat = new MediaBrowserCompat(PlaybackActivity.this, new ComponentName(PlaybackActivity.this, MediaPlaybackService.class),
+                mMediaBrowserCompatConnectionCallback, PlaybackActivity.this.getIntent().getExtras());
+
+        mMediaBrowserCompat.connect();
+
         mSettings = getSharedPreferences("SONG_DATA", Context.MODE_PRIVATE);
         serviceReceiver = new ServiceReceiver();
 
@@ -66,31 +125,35 @@ public class PlaybackActivity extends AppCompatActivity {
         playNext.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent playNext = new Intent("PLAY_NEXT");
-                sendBroadcast(playNext);
+                MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().skipToNext();
             }
         });
 
         playPrevious.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent playPrevious = new Intent("PLAY_PREVIOUS");
-                sendBroadcast(playPrevious);
+                MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().skipToPrevious();
             }
         });
 
         pauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent pause = new Intent("PAUSE");
-                sendBroadcast(pause);
+                if (mCurrentState == STATE_PAUSED) {
+                    MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().play();
+                    mCurrentState = STATE_PLAYING;
+                } else {
+                    if (MediaControllerCompat.getMediaController(PlaybackActivity.this).getPlaybackState().getState() == PlaybackStateCompat.STATE_PLAYING) {
+                        MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().pause();
+                    }
+                    mCurrentState = STATE_PAUSED;
+                }
             }
         });
 
         playbackType.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                playbackIcon++;
                 setPlaybackType(playbackIcon);
             }
         });
@@ -99,9 +162,7 @@ public class PlaybackActivity extends AppCompatActivity {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean fromUser) {
                 if (fromUser) {
-                    Intent progressUpdate = new Intent("PROGRESS_UPDATE");
-                    progressUpdate.putExtra("PROGRESS", i);
-                    sendBroadcast(progressUpdate);
+                    MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().seekTo(i);
                 }
             }
 
@@ -238,22 +299,29 @@ public class PlaybackActivity extends AppCompatActivity {
     }
 
     private void setPlaybackType(int playbackIconType) {
-        Intent playbackTypeIntent = new Intent("SHUFFLE");
         switch (playbackIconType) {
             case 0:
                 playbackType.setImageDrawable(getResources().getDrawable(R.drawable.ic_shuffle));
-                playbackTypeIntent.putExtra("ShuffleBoolean", true);
+                PlaybackLogic.setPlayAgain(false);
+                PlaybackLogic.setShuffle(true);
+                PlaybackLogic.removeHistory();
+                playbackIcon = 1;
                 break;
             case 1:
                 playbackType.setImageDrawable(getResources().getDrawable(R.drawable.ic_play_normal));
-                playbackTypeIntent.putExtra("ShuffleBoolean", false);
+                PlaybackLogic.setShuffle(false);
+                PlaybackLogic.removeHistory();
+                playbackIcon = 2;
                 break;
             case 2:
                 playbackType.setImageDrawable(getResources().getDrawable(R.drawable.ic_repeat_more));
-                playbackTypeIntent.putExtra("REPEAT_SONG", true);
-                playbackIcon = -1;
+                PlaybackLogic.setPlayAgain(true);
+                playbackIcon = 0;
                 break;
         }
-        sendBroadcast(playbackTypeIntent);
+        SharedPreferences mPlaybackSettings = getSharedPreferences("PLAYBACK_TYPE", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = mPlaybackSettings.edit();
+        editor.putInt("PLAYBACK_ICON", playbackIconType);
+        editor.apply();
     }
 }

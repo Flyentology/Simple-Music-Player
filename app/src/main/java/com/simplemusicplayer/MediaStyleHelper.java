@@ -24,15 +24,14 @@ public class MediaStyleHelper {
         MediaMetadataCompat mediaMetadata = controller.getMetadata();
         MediaDescriptionCompat description = mediaMetadata.getDescription();
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "MusicID");
         builder
                 .setContentTitle(description.getTitle())
                 .setContentText(description.getSubtitle())
                 .setSubText(description.getDescription())
                 .setLargeIcon(description.getIconBitmap())
                 .setContentIntent(controller.getSessionActivity())
-                .setDeleteIntent(
-                        MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_STOP))
+                .setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_STOP))
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         return builder;
     }

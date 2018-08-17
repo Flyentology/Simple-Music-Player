@@ -11,10 +11,13 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.RemoteException;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicBlur;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -28,6 +31,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.simplemusicplayer.LoadCovers;
+import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
 import com.simplemusicplayer.adapters.PlaylistViewAdapter;
 import com.simplemusicplayer.R;
@@ -49,6 +53,24 @@ public class PlaylistViewActivity extends AppCompatActivity {
     private int playlistIndex;
     private ArrayList<Playlist> playlists;
 
+    private static MediaBrowserCompat mMediaBrowserCompat;
+    private static MediaControllerCompat mMediaControllerCompat;
+
+    private MediaBrowserCompat.ConnectionCallback mMediaBrowserCompatConnectionCallback = new MediaBrowserCompat.ConnectionCallback() {
+
+        @Override
+        public void onConnected() {
+            super.onConnected();
+            try {
+                mMediaControllerCompat = new MediaControllerCompat(PlaylistViewActivity.this, mMediaBrowserCompat.getSessionToken());
+                MediaControllerCompat.setMediaController(PlaylistViewActivity.this, mMediaControllerCompat);
+            } catch (RemoteException e) {
+
+            }
+        }
+    };
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,7 +85,7 @@ public class PlaylistViewActivity extends AppCompatActivity {
         playlists = intent.getParcelableArrayListExtra("PLAYLISTS");
         playlistSongs = playlists.get(playlistIndex).getPlaylistSongs();
 
-
+// TODO: bind activity to media session like Main activity;
 
         ListView playlistView = findViewById(R.id.playlistSongs);
         playlistAdapter = new PlaylistViewAdapter(this, playlists.get(playlistIndex).getPlaylistSongs(), playlists);
@@ -96,10 +118,14 @@ public class PlaylistViewActivity extends AppCompatActivity {
         playlistView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                Intent sendPlaylist = new Intent("PLAY_PLAYLIST");
-                sendPlaylist.putParcelableArrayListExtra("PLAYLIST", playlistSongs);
-                sendPlaylist.putExtra("PLAYLIST_ITERATOR", i);
-                sendBroadcast(sendPlaylist);
+                PlaybackLogic.setSongsList(playlistSongs);
+                PlaybackLogic.setSongIterator(i);
+                PlaybackLogic.removeHistory();
+                PlaybackLogic.setPlayingPlaylist(true);
+                Bundle bundle = new Bundle();
+                bundle.putParcelable("SONG_TO_PLAY", playlistSongs.get(i));
+                MediaControllerCompat.getMediaController(PlaylistViewActivity.this).getTransportControls().playFromMediaId(String.valueOf(playlistSongs.get(i).getSongID())
+                        , bundle);
             }
         });
 
