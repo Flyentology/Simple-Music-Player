@@ -20,7 +20,9 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.devadvance.circularseekbar.CircularSeekBar;
+import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.R;
+import com.simplemusicplayer.activities.MainActivity;
 import com.simplemusicplayer.activities.PlaybackActivity;
 import com.simplemusicplayer.services.MediaPlaybackService;
 
@@ -47,32 +49,9 @@ public class MediaControllerFragment extends Fragment {
             super.onConnected();
             try {
                 mMediaControllerCompat = new MediaControllerCompat(getActivity(), mMediaBrowserCompat.getSessionToken());
-                mMediaControllerCompat.registerCallback(mMediaControllerCompatCallback);
                 MediaControllerCompat.setMediaController(getActivity(), mMediaControllerCompat);
             } catch (RemoteException e) {
 
-            }
-        }
-    };
-
-    private MediaControllerCompat.Callback mMediaControllerCompatCallback = new MediaControllerCompat.Callback() {
-
-        @Override
-        public void onPlaybackStateChanged(PlaybackStateCompat state) {
-            super.onPlaybackStateChanged(state);
-            if (state == null) {
-                return;
-            }
-
-            switch (state.getState()) {
-                case PlaybackStateCompat.STATE_PLAYING: {
-                    mCurrentState = STATE_PLAYING;
-                    break;
-                }
-                case PlaybackStateCompat.STATE_PAUSED: {
-                    mCurrentState = STATE_PAUSED;
-                    break;
-                }
             }
         }
     };
@@ -137,16 +116,25 @@ public class MediaControllerFragment extends Fragment {
         pauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (mCurrentState == STATE_PAUSED) {
-                    MediaControllerCompat.getMediaController(getActivity()).getTransportControls().play();
-                    pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_pause));
-                    mCurrentState = STATE_PLAYING;
+                if (MediaPlaybackService.songToPlay == null) {
+                    if (PlaybackLogic.getSongsList().size() >= 1) {
+                        Bundle bundle = new Bundle();
+                        bundle.putParcelable("SONG_TO_PLAY", PlaybackLogic.getSongsList().get(PlaybackLogic.getSongIterator()));
+                        MediaControllerCompat.getMediaController(getActivity()).getTransportControls().playFromMediaId(String.valueOf(PlaybackLogic.getSongsList()
+                                        .get(PlaybackLogic.getSongIterator()).getSongID())
+                                , bundle);
+                        PlaybackLogic.getPreviouslyPlayed().add(PlaybackLogic.getSongsList().get(PlaybackLogic.getSongIterator()));
+                    }
                 } else {
-                    if (MediaControllerCompat.getMediaController(getActivity()).getPlaybackState().getState() == PlaybackStateCompat.STATE_PLAYING) {
+                    if (mCurrentState == STATE_PAUSED) {
+                        MediaControllerCompat.getMediaController(getActivity()).getTransportControls().play();
+                        pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_pause));
+                        mCurrentState = STATE_PLAYING;
+                    } else {
                         MediaControllerCompat.getMediaController(getActivity()).getTransportControls().pause();
                         pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_start));
+                        mCurrentState = STATE_PAUSED;
                     }
-                    mCurrentState = STATE_PAUSED;
                 }
             }
         });
@@ -176,8 +164,10 @@ public class MediaControllerFragment extends Fragment {
         // change icon to paused when user see's fragment again
         if (mSettings.getBoolean("IS_PAUSED", false)) {
             pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_start));
+            mCurrentState = STATE_PAUSED;
         } else {
             pauseButton.setImageDrawable(getActivity().getDrawable(R.drawable.ic_pause));
+            mCurrentState = STATE_PLAYING;
         }
         // retrieve song progress and set it again
         playbackProgress.setProgress(mSettings.getInt("CURRENT_POSITION", 0));
@@ -188,6 +178,11 @@ public class MediaControllerFragment extends Fragment {
     public void onPause() {
         super.onPause();
         getActivity().unregisterReceiver(serviceReceiver);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
         mMediaBrowserCompat.disconnect();
     }
 

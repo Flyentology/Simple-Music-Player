@@ -83,8 +83,7 @@ public class PlaybackLogic {
         PlaybackLogic.isPlayingPlaylist = isPlayingPlaylist;
     }
 
-    //TODO: rewrite logic for playback
-    public Song nextSong() {
+    public static Song nextSong() {
         if (shuffle) {
             if (index < 0) {
                 index = 0;
@@ -107,7 +106,7 @@ public class PlaybackLogic {
         return songsList.get(songIterator);
     }
 
-    public Song previousSong() {
+    public static Song previousSong() {
         if (shuffle) {
             if (index > 0) {
                 index--;
@@ -121,7 +120,7 @@ public class PlaybackLogic {
         } else if (songIterator >= 1) {
             songIterator--;
         } else {
-            songIterator = songsList.size()-1;
+            songIterator = songsList.size() - 1;
         }
         return songsList.get(songIterator);
     }
@@ -163,4 +162,19 @@ public class PlaybackLogic {
         }
     }
 
+    public static void readPreferences(Context context) {
+        Gson mGson = new Gson();
+        SharedPreferences mSettings = context.getSharedPreferences("LAST_PLAYED_PLAYLIST", Context.MODE_PRIVATE);
+        Type collectionType = new TypeToken<List<Song>>() {
+        }.getType();
+        String loadValue = mSettings.getString("LAST_PLAYED_LIST", null);
+        List<Song> playlistToPlay = mGson.fromJson(loadValue, collectionType);
+
+        if (playlistToPlay != null) {
+            Log.d("ddd", "not null");
+            setSongsList(playlistToPlay);
+            setSongIterator(mSettings.getInt("SONG_ITERATOR", 0));
+        }
+        Log.d("ddd", " "+ mSettings.getInt("SONG_ITERATOR", 0));
+    }
 }

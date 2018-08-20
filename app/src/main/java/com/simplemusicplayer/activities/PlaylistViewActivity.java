@@ -3,6 +3,7 @@ package com.simplemusicplayer.activities;
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -37,6 +38,7 @@ import com.simplemusicplayer.adapters.PlaylistViewAdapter;
 import com.simplemusicplayer.R;
 import com.simplemusicplayer.models.Playlist;
 import com.simplemusicplayer.models.Song;
+import com.simplemusicplayer.services.MediaPlaybackService;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -85,8 +87,6 @@ public class PlaylistViewActivity extends AppCompatActivity {
         playlists = intent.getParcelableArrayListExtra("PLAYLISTS");
         playlistSongs = playlists.get(playlistIndex).getPlaylistSongs();
 
-// TODO: bind activity to media session like Main activity;
-
         ListView playlistView = findViewById(R.id.playlistSongs);
         playlistAdapter = new PlaylistViewAdapter(this, playlists.get(playlistIndex).getPlaylistSongs(), playlists);
         playlistView.setAdapter(playlistAdapter);
@@ -118,6 +118,9 @@ public class PlaylistViewActivity extends AppCompatActivity {
         playlistView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                if (!MediaPlaybackService.isRunning) {
+                    startService(new Intent(PlaylistViewActivity.this, MediaPlaybackService.class));
+                }
                 PlaybackLogic.setSongsList(playlistSongs);
                 PlaybackLogic.setSongIterator(i);
                 PlaybackLogic.removeHistory();
@@ -193,9 +196,17 @@ public class PlaylistViewActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onStart(){
+        super.onStart();
+        mMediaBrowserCompat = new MediaBrowserCompat(PlaylistViewActivity.this, new ComponentName(PlaylistViewActivity.this, MediaPlaybackService.class),
+                mMediaBrowserCompatConnectionCallback, PlaylistViewActivity.this.getIntent().getExtras());
+        mMediaBrowserCompat.connect();
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
-        // Load cover for playist if it's available
+        // Load cover for playlist if it's available
         if (playlistSongs.size() > 0) {
             LoadCovers loadCovers = new LoadCovers(playlistSongs, mHandler, 0, playlistSongs.size(), 200, 200, false);
             loadCovers.start();
@@ -206,6 +217,12 @@ public class PlaylistViewActivity extends AppCompatActivity {
     public void onPause() {
         super.onPause();
         PlaylistActivity.writeJSON(playlists, PlaylistViewActivity.this);
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+        mMediaBrowserCompat.disconnect();
     }
 
     @Override

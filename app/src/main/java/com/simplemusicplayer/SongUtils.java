@@ -3,7 +3,11 @@ package com.simplemusicplayer;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.provider.MediaStore;
 
 import com.simplemusicplayer.models.Song;
@@ -48,5 +52,61 @@ public class SongUtils {
             //cursors should be freed up after use
         }
         return songsList;
+    }
+
+    public static class LoadCover extends AsyncTask<String, Integer, Bitmap> {
+
+        private int width;
+        private int height;
+
+        public interface AsyncResponse {
+            public void processFinish(Bitmap output);
+        }
+
+        public AsyncResponse delegate = null;
+
+        public LoadCover(int width, int height, AsyncResponse delegate) {
+            this.width = width;
+            this.height = height;
+            this.delegate = delegate;
+        }
+
+        @Override
+        protected Bitmap doInBackground(String... strings) {
+            String path = strings[0];
+            MediaMetadataRetriever metaRetreiver = new MediaMetadataRetriever();
+            metaRetreiver.setDataSource(path);
+            byte[] art = metaRetreiver.getEmbeddedPicture();
+            if (art != null) {
+                BitmapFactory.Options opt = new BitmapFactory.Options();
+                opt.inJustDecodeBounds = true; //just check size of image
+                BitmapFactory.decodeByteArray(art, 0, art.length, opt);
+
+                // assign values of image
+                int imageHeight = opt.outHeight;
+                int imageWidth = opt.outWidth;
+
+                //condition to determine max inSample size
+                if (imageHeight > height || imageWidth > width) {
+                    final int halfHeight = imageHeight / 2;
+                    final int halfWidth = imageWidth / 2;
+                    int inSampleSize = 1;
+                    while ((halfHeight / inSampleSize) >= height
+                            && (halfWidth / inSampleSize) >= width) {
+                        inSampleSize *= 2;
+                    }
+                    opt.inSampleSize = inSampleSize;
+                }
+                opt.inJustDecodeBounds = false;
+                return BitmapFactory.decodeByteArray(art, 0, art.length, opt);
+            } else {
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            delegate.processFinish(bitmap);
+        }
     }
 }

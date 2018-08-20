@@ -31,7 +31,6 @@ public class MediaStyleHelper {
                 .setSubText(description.getDescription())
                 .setLargeIcon(description.getIconBitmap())
                 .setContentIntent(controller.getSessionActivity())
-                .setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(context, PlaybackStateCompat.ACTION_STOP))
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         return builder;
     }

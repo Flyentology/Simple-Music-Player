@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <integer name="seekbar_default">5</integer>
-    <integer name="seekbar_max">10</integer>
+    <integer name="seekbar_max">90</integer>
     <integer name="seekbar_min">1</integer>
 </resources>

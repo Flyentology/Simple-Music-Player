@@ -64,29 +64,6 @@ public class PlaybackActivity extends AppCompatActivity {
         }
     };
 
-    private MediaControllerCompat.Callback mMediaControllerCompatCallback = new MediaControllerCompat.Callback() {
-
-        @Override
-        public void onPlaybackStateChanged(PlaybackStateCompat state) {
-            super.onPlaybackStateChanged(state);
-            if (state == null) {
-                return;
-            }
-
-            switch (state.getState()) {
-                case PlaybackStateCompat.STATE_PLAYING: {
-                    mCurrentState = STATE_PLAYING;
-                    pauseButton.setImageDrawable(getDrawable(R.drawable.ic_pause));
-                    break;
-                }
-                case PlaybackStateCompat.STATE_PAUSED: {
-                    mCurrentState = STATE_PAUSED;
-                    pauseButton.setImageDrawable(getDrawable(R.drawable.ic_start));
-                    break;
-                }
-            }
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,11 +83,6 @@ public class PlaybackActivity extends AppCompatActivity {
         songProgress = findViewById(R.id.seekBar_playback_activity);
         totalDuration = findViewById(R.id.totalDuration_playback_activity);
         currentDuration = findViewById(R.id.currentDuration_playback_activity);
-
-        mMediaBrowserCompat = new MediaBrowserCompat(PlaybackActivity.this, new ComponentName(PlaybackActivity.this, MediaPlaybackService.class),
-                mMediaBrowserCompatConnectionCallback, PlaybackActivity.this.getIntent().getExtras());
-
-        mMediaBrowserCompat.connect();
 
         mSettings = getSharedPreferences("SONG_DATA", Context.MODE_PRIVATE);
         serviceReceiver = new ServiceReceiver();
@@ -139,26 +111,41 @@ public class PlaybackActivity extends AppCompatActivity {
         pauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (mCurrentState == STATE_PAUSED) {
-                    MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().play();
-                    mCurrentState = STATE_PLAYING;
-                } else {
-                    if (MediaControllerCompat.getMediaController(PlaybackActivity.this).getPlaybackState().getState() == PlaybackStateCompat.STATE_PLAYING) {
-                        MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().pause();
+                if (MediaPlaybackService.songToPlay == null) {
+                    if (PlaybackLogic.getSongsList().size() >= 1) {
+                        Bundle bundle = new Bundle();
+                        bundle.putParcelable("SONG_TO_PLAY", PlaybackLogic.getSongsList().get(PlaybackLogic.getSongIterator()));
+                        MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().playFromMediaId(String.valueOf(PlaybackLogic.getSongsList()
+                                        .get(PlaybackLogic.getSongIterator()).getSongID())
+                                , bundle);
+                        PlaybackLogic.getPreviouslyPlayed().add(PlaybackLogic.getSongsList().get(PlaybackLogic.getSongIterator()));
                     }
-                    mCurrentState = STATE_PAUSED;
+                } else {
+                    if (mCurrentState == STATE_PAUSED) {
+                        MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().play();
+                        mCurrentState = STATE_PLAYING;
+                    } else {
+                        if (MediaControllerCompat.getMediaController(PlaybackActivity.this).getPlaybackState().getState() == PlaybackStateCompat.STATE_PLAYING) {
+                            MediaControllerCompat.getMediaController(PlaybackActivity.this).getTransportControls().pause();
+                        }
+                        mCurrentState = STATE_PAUSED;
+                    }
                 }
             }
         });
 
-        playbackType.setOnClickListener(new View.OnClickListener() {
+        playbackType.setOnClickListener(new View.OnClickListener()
+
+        {
             @Override
             public void onClick(View view) {
                 setPlaybackType(playbackIcon);
             }
         });
 
-        songProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        songProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener()
+
+        {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean fromUser) {
                 if (fromUser) {
@@ -176,6 +163,14 @@ public class PlaybackActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    @Override
+    public void onStart(){
+        super.onStart();
+        mMediaBrowserCompat = new MediaBrowserCompat(PlaybackActivity.this, new ComponentName(PlaybackActivity.this, MediaPlaybackService.class),
+                mMediaBrowserCompatConnectionCallback, PlaybackActivity.this.getIntent().getExtras());
+        mMediaBrowserCompat.connect();
     }
 
     @Override
@@ -200,8 +195,10 @@ public class PlaybackActivity extends AppCompatActivity {
         // change icon to paused when user see's playback activity again
         if (mSettings.getBoolean("IS_PAUSED", false)) {
             pauseButton.setImageDrawable(getDrawable(R.drawable.ic_start_dark));
+            mCurrentState = STATE_PAUSED;
         } else {
             pauseButton.setImageDrawable(getDrawable(R.drawable.ic_pause_dark));
+            mCurrentState = STATE_PLAYING;
         }
         // retrieve song progress and set it again
         songProgress.setProgress(mSettings.getInt("CURRENT_POSITION", 0));
@@ -214,6 +211,12 @@ public class PlaybackActivity extends AppCompatActivity {
     public void onPause() {
         super.onPause();
         unregisterReceiver(serviceReceiver);
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+        mMediaBrowserCompat.disconnect();
     }
 
     private class LoadCover extends AsyncTask<String, Integer, Bitmap> {

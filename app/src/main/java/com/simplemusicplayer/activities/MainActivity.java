@@ -3,6 +3,7 @@ package com.simplemusicplayer.activities;
 import android.Manifest;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.SearchManager;
@@ -12,12 +13,15 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v7.preference.PreferenceManager;
@@ -26,6 +30,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -56,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private final int MY_PERMISSIONS_REQUEST = 1;
     private ListView songsList;
     private boolean playShuffle = false;
-    private boolean listChanged = false;
+    private boolean listChanged = true;
     private static int whichSortType = 0;
     public static AtomicBoolean stopThreads = new AtomicBoolean(false);
     private SongAdapter songAdapter;
@@ -90,11 +95,11 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         Toolbar myToolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
 
-        startService(new Intent(this, MediaPlaybackService.class));
-
+        if(!MediaPlaybackService.isRunning){
+            startService(new Intent(this, MediaPlaybackService.class));
+        }
         mMediaBrowserCompat = new MediaBrowserCompat(MainActivity.this, new ComponentName(MainActivity.this, MediaPlaybackService.class),
                 mMediaBrowserCompatConnectionCallback, MainActivity.this.getIntent().getExtras());
-
         mMediaBrowserCompat.connect();
 
         FragmentManager fragmentManager = getFragmentManager();
@@ -146,7 +151,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             }
         } else {
             baseSongList = SongUtils.fillSongList(this, 0);
-            PlaybackLogic.setSongsList(baseSongList);
             songAdapter = new SongAdapter(this, this, songsListView);
             songsList.setAdapter(songAdapter);
             songsListView.addAll(baseSongList);
@@ -185,6 +189,10 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                     }
                 }
 
+                if(!MediaPlaybackService.isRunning){
+                    startService(new Intent(MainActivity.this, MediaPlaybackService.class));
+                }
+
                 if (PlaybackLogic.isPlayingPlaylist() || listChanged) {
                     PlaybackLogic.setSongsList(baseSongList);
                     PlaybackLogic.setPlayingPlaylist(false);
@@ -210,6 +218,11 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     }
 
     @Override
+    public void onPause(){
+        super.onPause();
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
 
@@ -225,7 +238,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                                 Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_DENIED) {
                             Toast.makeText(this, "permission granted", Toast.LENGTH_LONG).show();
                             baseSongList = SongUtils.fillSongList(this, 0);
-                            PlaybackLogic.setSongsList(baseSongList);
                             songAdapter = new SongAdapter(this, this, songsListView);
                             songsList.setAdapter(songAdapter);
                             songsListView.addAll(baseSongList);
@@ -245,11 +257,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     @Override
     public void onBackPressed() {
         //pressing back button makes app go background
-        //moveTaskToBack(true);
-        FragmentManager fragmentManager = getFragmentManager();
-        if (fragmentManager.getBackStackEntryCount() > 0) {
-            fragmentManager.popBackStackImmediate();
-        } else super.onBackPressed();
+        moveTaskToBack(true);
     }
 
     private void createNotificationChannel() {
@@ -258,9 +266,10 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = getString(R.string.channel_name);
             String description = getString(R.string.channel_description);
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel("MusicID", name, importance);
             channel.setDescription(description);
+            channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             // Register the channel with the system; you can't change the importance
             // or other notification behaviors after thisenter code here
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
