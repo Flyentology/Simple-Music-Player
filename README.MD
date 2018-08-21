@@ -6,6 +6,10 @@ Simple Music Player is a music player application for devices running Android ne
 
 Android Studio 3.x
 
+## Screens
+
+![screen3](https://user-images.githubusercontent.com/37186104/44403613-3aacb380-a555-11e8-849f-5a7a9260593a.png)
+
 ## Authors
 
 * **Damian Kędzior** - [Flyentology](https://github.com/Flyentology)
