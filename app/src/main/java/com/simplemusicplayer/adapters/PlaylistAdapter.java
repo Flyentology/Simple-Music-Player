@@ -14,6 +14,7 @@ import com.simplemusicplayer.R;
 import java.util.ArrayList;
 import java.util.List;
 
+/**Class that extends BaseAdapter and returns view of playlist item on grid view.*/
 public class PlaylistAdapter extends BaseAdapter {
 
     private List<Playlist> playlists;

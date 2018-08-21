@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**Activity that shows selected playlist content using {@link PlaylistViewAdapter}.*/
 public class PlaylistViewActivity extends AppCompatActivity {
 
     private ArrayList<Song> playlistSongs;
@@ -169,6 +170,9 @@ public class PlaylistViewActivity extends AppCompatActivity {
 
         mHandler = new Handler() {
             // Wait for message from thread
+            /**Method that waits for message if song cover was loaded successfully
+             * It assigns bitmap to image view or empty cover
+             * Creates duplicate and applies RenderScript blur effect that's used for background*/
             public void handleMessage(android.os.Message msg) {
                 // check if song of msg.what index has cover art to display
                 if (playlistSongs.get(msg.what).getCoverArt() != null) {
@@ -225,32 +229,34 @@ public class PlaylistViewActivity extends AppCompatActivity {
         mMediaBrowserCompat.disconnect();
     }
 
+    /**
+     * Get songs from {@link AddSongsActivity}, convert them to linkedHashSet.
+     * Check if they don't already exist in current playlist.
+     * Add all missing songs and trigger thread that loads cover art.
+     */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             case RECEIVE_SONGS: {
                 if (resultCode == Activity.RESULT_OK) {
-                    /*
-                     * Get songs from AddSongsActivity, convert them to linkedHashSet
-                     * check if they don't already exist in current playlist
-                     * add all missing songs
-                     */
                     ArrayList<Song> temporaryList = data.getParcelableArrayListExtra("SONGS_TO_ADD");
-                    ArrayList<Song> duplicates = new ArrayList<>();
-                    Set<Song> songsToAdd = new LinkedHashSet<>(temporaryList);
-                    for (Song song : playlistSongs) {
-                        if (songsToAdd.contains(song)) {
-                            duplicates.add(song);
+                    if(temporaryList.size() > 0){
+                        ArrayList<Song> duplicates = new ArrayList<>();
+                        Set<Song> songsToAdd = new LinkedHashSet<>(temporaryList);
+                        for (Song song : playlistSongs) {
+                            if (songsToAdd.contains(song)) {
+                                duplicates.add(song);
+                            }
                         }
+                        songsToAdd.removeAll(duplicates);
+                        playlists.get(playlistIndex).getPlaylistSongs().addAll(songsToAdd);
+                        // save playlists after adding song to one of them
+                        PlaylistActivity.writeJSON(playlists, PlaylistViewActivity.this);
+                        LoadCovers loadCovers = new LoadCovers(playlistSongs, mHandler, 0, playlistSongs.size(), 200, 200, false);
+                        loadCovers.start();
+                        playlistAdapter.notifyDataSetChanged();
                     }
-                    songsToAdd.removeAll(duplicates);
-                    playlists.get(playlistIndex).getPlaylistSongs().addAll(songsToAdd);
-                    // save playlists after adding song to one of them
-                    PlaylistActivity.writeJSON(playlists, PlaylistViewActivity.this);
-                    LoadCovers loadCovers = new LoadCovers(playlistSongs, mHandler, 0, playlistSongs.size(), 200, 200, false);
-                    loadCovers.start();
-                    playlistAdapter.notifyDataSetChanged();
                 }
             }
         }

@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
@@ -69,6 +70,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private List<Song> baseSongList = new ArrayList<>();
     private Handler mHandler;
     private int threadCount = 0;
+    private Fragment settingsFragment;
 
     private static MediaBrowserCompat mMediaBrowserCompat;
     private static MediaControllerCompat mMediaControllerCompat;
@@ -95,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         Toolbar myToolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
 
-        if(!MediaPlaybackService.isRunning){
+        if (!MediaPlaybackService.isRunning) {
             startService(new Intent(this, MediaPlaybackService.class));
         }
         mMediaBrowserCompat = new MediaBrowserCompat(MainActivity.this, new ComponentName(MainActivity.this, MediaPlaybackService.class),
@@ -189,7 +191,7 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                     }
                 }
 
-                if(!MediaPlaybackService.isRunning){
+                if (!MediaPlaybackService.isRunning) {
                     startService(new Intent(MainActivity.this, MediaPlaybackService.class));
                 }
 
@@ -218,14 +220,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     }
 
     @Override
-    public void onPause(){
+    public void onPause() {
         super.onPause();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
     }
 
     @Override
@@ -256,10 +252,17 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
     @Override
     public void onBackPressed() {
-        //pressing back button makes app go background
-        moveTaskToBack(true);
+        //check if fragment is on the screen if so then remove it
+        if (settingsFragment != null) {
+            getSupportFragmentManager().beginTransaction().remove(settingsFragment).commit();
+            settingsFragment = null;
+        } else {
+            //pressing back button makes app go background
+            moveTaskToBack(true);
+        }
     }
 
+    /**Method used to create notification channel for Android newer than Nougat*/
     private void createNotificationChannel() {
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
@@ -294,7 +297,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         // Handle item selection
         switch (item.getItemId()) {
             case R.id.settings:
-                getSupportFragmentManager().beginTransaction().replace(android.R.id.content, new SettingsFragment()).commit();
+                settingsFragment = new SettingsFragment();
+                getSupportFragmentManager().beginTransaction().replace(android.R.id.content, settingsFragment).commit();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -377,10 +381,11 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         }
     }
 
+    /**Method that starts {@link com.simplemusicplayer.LoadCovers} threads with chunk size of 200.*/
     private void startThreads() {
-        int chunkSize = 100;
+        int chunkSize = 200;
         for (int i = 0; i < songsListView.size(); i += chunkSize) {
-            LoadCovers loadCovers = new LoadCovers(songsListView, mHandler, i, Math.min(i + chunkSize, songsListView.size()), 90, 90, true);
+            LoadCovers loadCovers = new LoadCovers(songsListView, mHandler, i, Math.min(i + chunkSize, songsListView.size()), 80, 80, true);
             loadCovers.start();
             threadCount++;
         }

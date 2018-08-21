@@ -12,7 +12,7 @@ import com.simplemusicplayer.models.Song;
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**Class used to load playlist list and song list in Main Activity covers*/
 public class LoadCovers extends Thread {
 
     private int initialValue;

@@ -15,8 +15,10 @@ import com.simplemusicplayer.models.Song;
 import java.util.ArrayList;
 import java.util.List;
 
+/**Class used for utility methods.*/
 public class SongUtils {
 
+    /**Method that queries for media files in a phone and returns list of songs depends of sort type.*/
     public static List<Song> fillSongList(Context context, int sortOrder) {
         List<Song> songsList = new ArrayList<>();
         Cursor cursor;
@@ -54,6 +56,10 @@ public class SongUtils {
         return songsList;
     }
 
+    /**
+     * Nested class used to asynchronously load one cover art bitmap.
+     * Size is passed in constructor.
+     */
     public static class LoadCover extends AsyncTask<String, Integer, Bitmap> {
 
         private int width;

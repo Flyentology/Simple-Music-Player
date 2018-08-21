@@ -36,6 +36,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+/**Activity used to display playlist and adding ability to create them.*/
 public class PlaylistActivity extends AppCompatActivity {
     private List<Playlist> playlists = new ArrayList<>();
     private PlaylistAdapter playlistAdapter;
@@ -176,6 +177,7 @@ public class PlaylistActivity extends AppCompatActivity {
         }
     }
 
+    /**Static method to save user created playlists in Shared Preferences.*/
     public static void writeJSON(List<Playlist> playlists, Context context) {
         SharedPreferences mSettings = context.getSharedPreferences("Playlists", Context.MODE_PRIVATE);
         SharedPreferences.Editor mEditor = mSettings.edit();
@@ -191,6 +193,7 @@ public class PlaylistActivity extends AppCompatActivity {
         }
     }
 
+    /**Static method to retrieve user created playlists from Shared Preferences.*/
     public static List<Playlist> readJSON(Context context) {
         SharedPreferences mSettings = context.getSharedPreferences("Playlists", Context.MODE_PRIVATE);
         GsonBuilder gsonBuilder = new GsonBuilder();

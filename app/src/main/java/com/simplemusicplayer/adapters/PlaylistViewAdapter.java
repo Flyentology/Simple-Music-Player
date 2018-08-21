@@ -90,8 +90,10 @@ public class PlaylistViewAdapter extends BaseAdapter {
                                     case 0:
                                         List<String> playlistNames = new ArrayList<>();
 
-                                        for (Playlist playlist : playlists) {
-                                            playlistNames.add(playlist.toString());
+                                        if(playlists.size() > 0){
+                                            for (Playlist playlist : playlists) {
+                                                playlistNames.add(playlist.toString());
+                                            }
                                         }
                                         final CharSequence[] cs = playlistNames.toArray(new CharSequence[playlists.size()]);
                                         AlertDialog.Builder builder1 = new AlertDialog.Builder(mContext);

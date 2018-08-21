@@ -17,6 +17,7 @@ import com.simplemusicplayer.models.Song;
 import java.util.ArrayList;
 import java.util.List;
 
+/**Class extending ArrayAdapter used to display Song item in MainActivity.*/
 public class SongAdapter extends ArrayAdapter {
 
     private Context mContext;

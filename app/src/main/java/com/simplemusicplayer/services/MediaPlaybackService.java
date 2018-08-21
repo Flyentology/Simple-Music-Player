@@ -1,7 +1,6 @@
 package com.simplemusicplayer.services;
 
 import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -35,7 +34,6 @@ import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.R;
 import com.simplemusicplayer.SongUtils;
 import com.simplemusicplayer.models.Song;
-import com.squareup.picasso.Picasso;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -153,7 +151,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
                 mMediaSessionCompat.setActive(true);
                 setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING);
 
-                if(isLoaded){
+                if (isLoaded) {
                     startForeground(1337, showPlayingNotification());
                 }
                 mMediaPlayer.start();
@@ -175,7 +173,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
             if (mMediaPlayer.isPlaying()) {
                 mMediaPlayer.pause();
                 setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED);
-                if(isLoaded){
+                if (isLoaded) {
                     showPausedNotification();
                     stopForeground(false);
                 }
@@ -212,7 +210,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
             mMediaSessionCompat.setActive(false);
             audioManager.abandonAudioFocus(onAudioFocusChangeListener);
             isRunning = false;
-            writePreferences(PlaybackLogic.getSongsList(), PlaybackLogic.getSongIterator(), getApplicationContext());
+            writeLastPlaylist(PlaybackLogic.getSongsList(), PlaybackLogic.getSongIterator(), getApplicationContext());
             stopForeground(true);
             stopSelf();
         }
@@ -226,7 +224,6 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
         @Override
         public void onPlayFromMediaId(String mediaId, Bundle extras) {
             super.onPlayFromMediaId(mediaId, extras);
-            Thread.dumpStack();
             mMediaPlayer.reset();
             Uri uri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, Long.valueOf(mediaId));
             try {
@@ -235,6 +232,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
+            //set class loader to prevent exception while unmarshalling
             extras.setClassLoader(getClass().getClassLoader());
             songToPlay = extras.getParcelable("SONG_TO_PLAY");
             initMediaSessionMetadata(songToPlay);
@@ -309,11 +307,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
     }
 
     private void initMediaSessionMetadata(Song song) {
-
-        if(loadCover !=null){
+        if (loadCover != null) {
             loadCover.cancel(true);
         }
-
         isLoaded = false;
         final Song songToLoad = song;
         final MediaMetadataCompat.Builder metadataBuilder = new MediaMetadataCompat.Builder();
@@ -335,6 +331,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
                 metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);
                 mMediaSessionCompat.setMetadata(metadataBuilder.build());
                 isLoaded = true;
+                sendBroadcast(new Intent("APPLY_COVER"));
                 startForeground(1337, showPlayingNotification());
             }
         });
@@ -401,7 +398,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
         }
     }
 
-    private void writePreferences(List<Song> playlistToSave, int songIterator, Context context) {
+    private void writeLastPlaylist(List<Song> playlistToSave, int songIterator, Context context) {
         Gson mGson = new Gson();
         SharedPreferences mSettings = context.getSharedPreferences("LAST_PLAYED_PLAYLIST", Context.MODE_PRIVATE);
         SharedPreferences.Editor mEditor = mSettings.edit();

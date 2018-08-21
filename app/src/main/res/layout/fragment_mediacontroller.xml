@@ -48,7 +48,8 @@
         android:layout_height="25dp"
         android:layout_alignParentTop="true"
         android:layout_toStartOf="@+id/playPrevious"
-        android:layout_toEndOf="@id/progressBar"
+        android:layout_toEndOf="@id/frame"
+        android:layout_marginTop="10dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/black" />
@@ -57,20 +58,49 @@
         android:id="@+id/nameOfArtist"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_centerVertical="true"
-        android:layout_toEndOf="@id/progressBar"
+        android:layout_toEndOf="@id/frame"
         android:layout_toStartOf="@+id/playPrevious"
+        android:layout_marginTop="30dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/black" />
 
-    <com.devadvance.circularseekbar.CircularSeekBar
-        android:id="@+id/progressBar"
-        android:layout_width="100dp"
-        android:layout_height="match_parent"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        app:circle_progress_color="@color/colorAccent"
-        app:pointer_halo_width="0dp"
-        app:pointer_radius="0dp" />
+    <FrameLayout
+        android:id="@+id/frame"
+        android:layout_width="70dp"
+        android:layout_height="match_parent">
+        <de.hdodenhof.circleimageview.CircleImageView
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/circleImageView"
+            android:layout_width="50dp"
+            android:layout_marginStart="7dp"
+            android:layout_marginTop="7dp"
+            android:layout_height="50dp"
+            app:civ_border_width="0dp" />
+        <com.devadvance.circularseekbar.CircularSeekBar
+            android:id="@+id/progressBar"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:circle_progress_color="@color/colorAccent"
+            app:pointer_halo_width="0dp"
+            app:pointer_radius="0dp"/>
+    </FrameLayout>
+    <!--<com.devadvance.circularseekbar.CircularSeekBar-->
+        <!--android:id="@+id/progressBar"-->
+        <!--android:layout_width="100dp"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:layout_alignParentStart="true"-->
+        <!--android:layout_alignParentTop="true"-->
+        <!--app:circle_progress_color="@color/colorAccent"-->
+        <!--app:pointer_halo_width="0dp"-->
+        <!--app:pointer_radius="0dp"/>-->
+    <!--<de.hdodenhof.circleimageview.CircleImageView-->
+        <!--xmlns:app="http://schemas.android.com/apk/res-auto"-->
+        <!--android:id="@+id/circleImageView"-->
+        <!--android:layout_width="100dp"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:layout_alignParentStart="true"-->
+        <!--android:layout_alignParentTop="true"-->
+        <!--android:src=""-->
+        <!--app:civ_border_width="0dp" />-->
 </RelativeLayout>

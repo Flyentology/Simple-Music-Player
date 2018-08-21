@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+/**Class which handles all the logic for media playback*/
 public class PlaybackLogic {
 
     private static List<Song> songsList = new ArrayList<>();
@@ -42,19 +43,6 @@ public class PlaybackLogic {
     public static void setSongIterator(int songIterator) {
         PlaybackLogic.songIterator = songIterator;
     }
-
-    public static int getIndex() {
-        return index;
-    }
-
-    public static void setIndex(int index) {
-        PlaybackLogic.index = index;
-    }
-
-    public static boolean isShuffle() {
-        return shuffle;
-    }
-
     public static void setShuffle(boolean shuffle) {
         PlaybackLogic.shuffle = shuffle;
     }
@@ -69,10 +57,6 @@ public class PlaybackLogic {
 
     public static List<Song> getPreviouslyPlayed() {
         return previouslyPlayed;
-    }
-
-    public static void setPreviouslyPlayed(List<Song> previouslyPlayed) {
-        PlaybackLogic.previouslyPlayed = previouslyPlayed;
     }
 
     public static boolean isPlayingPlaylist() {
@@ -144,7 +128,7 @@ public class PlaybackLogic {
         writeJSON(lastPlayedSongs, context);
     }
 
-    /*
+    /**
      * Method that saves last played songs into JSON
      * in shared preferences under key LAST_PLAYED_LIST
      */
@@ -162,6 +146,7 @@ public class PlaybackLogic {
         }
     }
 
+    /**Method that reads playlist saved on last application usage*/
     public static void readPreferences(Context context) {
         Gson mGson = new Gson();
         SharedPreferences mSettings = context.getSharedPreferences("LAST_PLAYED_PLAYLIST", Context.MODE_PRIVATE);
@@ -171,7 +156,6 @@ public class PlaybackLogic {
         List<Song> playlistToPlay = mGson.fromJson(loadValue, collectionType);
 
         if (playlistToPlay != null) {
-            Log.d("ddd", "not null");
             setSongsList(playlistToPlay);
             setSongIterator(mSettings.getInt("SONG_ITERATOR", 0));
         }

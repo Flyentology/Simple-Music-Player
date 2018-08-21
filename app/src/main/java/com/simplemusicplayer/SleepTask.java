@@ -6,6 +6,9 @@ import android.support.annotation.NonNull;
 
 import androidx.work.Worker;
 
+/**
+ * Class used with work manager to stop playback
+ */
 public class SleepTask extends Worker {
 
     @NonNull

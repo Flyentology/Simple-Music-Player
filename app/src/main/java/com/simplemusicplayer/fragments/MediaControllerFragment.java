@@ -7,11 +7,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,12 +30,17 @@ import com.simplemusicplayer.R;
 import com.simplemusicplayer.activities.MainActivity;
 import com.simplemusicplayer.activities.PlaybackActivity;
 import com.simplemusicplayer.services.MediaPlaybackService;
+import com.squareup.picasso.Picasso;
 
+import de.hdodenhof.circleimageview.CircleImageView;
+
+/**Fragment that appears in every activity and indicates informations about song, playback progress and gives the user controls.*/
 public class MediaControllerFragment extends Fragment {
 
     private View v;
     private TextView songName, artistName;
     private CircularSeekBar playbackProgress;
+    private CircleImageView circleImageView;
     private ImageButton pauseButton;
     private ServiceReceiver serviceReceiver = new ServiceReceiver();
     private SharedPreferences mSettings;
@@ -50,6 +60,15 @@ public class MediaControllerFragment extends Fragment {
             try {
                 mMediaControllerCompat = new MediaControllerCompat(getActivity(), mMediaBrowserCompat.getSessionToken());
                 MediaControllerCompat.setMediaController(getActivity(), mMediaControllerCompat);
+                // check if there is metadata art possible to load
+                if (mMediaControllerCompat != null && mMediaControllerCompat.getMetadata() != null) {
+                    if(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART) != null){
+                        circleImageView.setImageBitmap(Bitmap.createScaledBitmap(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
+                                , 80, 80, true));
+                    } else {
+                        circleImageView.setImageDrawable(getActivity().getDrawable(R.drawable.ic_empty_cover));
+                    }
+                }
             } catch (RemoteException e) {
 
             }
@@ -86,6 +105,8 @@ public class MediaControllerFragment extends Fragment {
         mMediaBrowserCompat.connect();
     }
 
+    /**Method used when inflating the view and initialising UI elements.
+     * Also sets up onClickListeners for various elements.*/
     private void configureFragmentUI() {
         ImageButton playNext = v.findViewById(R.id.playNext);
         ImageButton playPrevious = v.findViewById(R.id.playPrevious);
@@ -98,6 +119,7 @@ public class MediaControllerFragment extends Fragment {
         playbackProgress = v.findViewById(R.id.progressBar);
         playbackProgress.setPointerAlpha(100);
         playbackProgress.setIsTouchEnabled(false);
+        circleImageView = v.findViewById(R.id.circleImageView);
 
         playNext.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -156,6 +178,7 @@ public class MediaControllerFragment extends Fragment {
         intentFilter.addAction("ICON_PAUSE");
         intentFilter.addAction("ICON_RESUME");
         intentFilter.addAction("SONG_DATA");
+        intentFilter.addAction("APPLY_COVER");
         getActivity().registerReceiver(serviceReceiver, intentFilter);
 
         songName.setText(mSettings.getString("SONG_NAME", ""));
@@ -186,6 +209,7 @@ public class MediaControllerFragment extends Fragment {
         mMediaBrowserCompat.disconnect();
     }
 
+    /**Nested BroadcastReceiver to handle incoming data about currently playing song.*/
     private class ServiceReceiver extends BroadcastReceiver {
 
         @Override
@@ -208,6 +232,17 @@ public class MediaControllerFragment extends Fragment {
                 case "SONG_DATA":
                     songName.setText(mSettings.getString("SONG_NAME", ""));
                     artistName.setText(mSettings.getString("ARTIST_NAME", ""));
+                    break;
+                case "APPLY_COVER":
+                    // check if there is metadata art possible to load
+                    if (mMediaControllerCompat != null && mMediaControllerCompat.getMetadata() != null) {
+                        if(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART) != null){
+                            circleImageView.setImageBitmap(Bitmap.createScaledBitmap(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
+                                    , 80, 80, true));
+                        } else {
+                            circleImageView.setImageDrawable(getActivity().getDrawable(R.drawable.ic_empty_cover));
+                        }
+                    }
                     break;
             }
         }

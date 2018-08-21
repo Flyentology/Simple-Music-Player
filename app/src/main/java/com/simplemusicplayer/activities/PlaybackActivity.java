@@ -14,6 +14,7 @@ import android.media.session.MediaSession;
 import android.os.AsyncTask;
 import android.os.RemoteException;
 import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -32,6 +33,7 @@ import com.simplemusicplayer.services.MediaPlaybackService;
 
 import java.util.Locale;
 
+/**Activity that shows song data, cover art, current progress and playback controls.*/
 public class PlaybackActivity extends AppCompatActivity {
 
     private TextView songTitle, totalDuration, currentDuration;
@@ -58,6 +60,14 @@ public class PlaybackActivity extends AppCompatActivity {
             try {
                 mMediaControllerCompat = new MediaControllerCompat(PlaybackActivity.this, mMediaBrowserCompat.getSessionToken());
                 MediaControllerCompat.setMediaController(PlaybackActivity.this, mMediaControllerCompat);
+                // check if there is metadata art possible to load
+                if (mMediaControllerCompat != null && mMediaControllerCompat.getMetadata() != null) {
+                    if(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART) != null){
+                        coverArt.setImageBitmap(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART));
+                    } else {
+                        coverArt.setImageDrawable(getDrawable(R.drawable.blank_cd));
+                    }
+                }
             } catch (RemoteException e) {
 
             }
@@ -86,6 +96,10 @@ public class PlaybackActivity extends AppCompatActivity {
 
         mSettings = getSharedPreferences("SONG_DATA", Context.MODE_PRIVATE);
         serviceReceiver = new ServiceReceiver();
+
+        mMediaBrowserCompat = new MediaBrowserCompat(PlaybackActivity.this, new ComponentName(PlaybackActivity.this, MediaPlaybackService.class),
+                mMediaBrowserCompatConnectionCallback, PlaybackActivity.this.getIntent().getExtras());
+        mMediaBrowserCompat.connect();
 
         finishActivity.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -168,9 +182,6 @@ public class PlaybackActivity extends AppCompatActivity {
     @Override
     public void onStart(){
         super.onStart();
-        mMediaBrowserCompat = new MediaBrowserCompat(PlaybackActivity.this, new ComponentName(PlaybackActivity.this, MediaPlaybackService.class),
-                mMediaBrowserCompatConnectionCallback, PlaybackActivity.this.getIntent().getExtras());
-        mMediaBrowserCompat.connect();
     }
 
     @Override
@@ -182,13 +193,10 @@ public class PlaybackActivity extends AppCompatActivity {
         intentFilter.addAction("ICON_PAUSE");
         intentFilter.addAction("ICON_RESUME");
         intentFilter.addAction("SONG_DATA");
+        intentFilter.addAction("APPLY_COVER");
         registerReceiver(serviceReceiver, intentFilter);
         songTitle.setText(mSettings.getString("SONG_NAME", "") + " - " + mSettings.getString("ARTIST_NAME", ""));
-        String path = mSettings.getString("COVER_PATH", null);
 
-        if (path != null) {
-            new LoadCover().execute(path);
-        }
         SharedPreferences playbackSettings = getSharedPreferences("PLAYBACK_TYPE", Context.MODE_PRIVATE);
         setPlaybackType(playbackSettings.getInt("PLAYBACK_ICON", 0));
 
@@ -219,49 +227,6 @@ public class PlaybackActivity extends AppCompatActivity {
         mMediaBrowserCompat.disconnect();
     }
 
-    private class LoadCover extends AsyncTask<String, Integer, Bitmap> {
-
-        @Override
-        protected Bitmap doInBackground(String... strings) {
-            String path = strings[0];
-            MediaMetadataRetriever metaRetreiver = new MediaMetadataRetriever();
-            metaRetreiver.setDataSource(path);
-            byte[] art = metaRetreiver.getEmbeddedPicture();
-            if (art != null) {
-                BitmapFactory.Options opt = new BitmapFactory.Options();
-                opt.inJustDecodeBounds = true; //just check size of image
-                BitmapFactory.decodeByteArray(art, 0, art.length, opt);
-
-                // assign values of image
-                int imageHeight = opt.outHeight;
-                int imageWidth = opt.outWidth;
-
-                //condition to determine max inSample size
-                if (imageHeight > 310 || imageWidth > 310) {
-                    final int halfHeight = imageHeight / 2;
-                    final int halfWidth = imageWidth / 2;
-                    int inSampleSize = 1;
-                    while ((halfHeight / inSampleSize) >= 310
-                            && (halfWidth / inSampleSize) >= 310) {
-                        inSampleSize *= 2;
-                    }
-                    opt.inSampleSize = inSampleSize;
-                }
-                opt.inJustDecodeBounds = false;
-                return BitmapFactory.decodeByteArray(art, 0, art.length, opt);
-            } else {
-                return BitmapFactory.decodeResource(getApplicationContext().getResources(),
-                        R.drawable.ic_empty_cover);
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            super.onPostExecute(bitmap);
-            coverArt.setImageBitmap(bitmap);
-        }
-    }
-
     private class ServiceReceiver extends BroadcastReceiver {
 
         @Override
@@ -285,15 +250,23 @@ public class PlaybackActivity extends AppCompatActivity {
                     break;
                 case "SONG_DATA":
                     songTitle.setText(mSettings.getString("SONG_NAME", "") + " - " + mSettings.getString("ARTIST_NAME", ""));
-                    String path = mSettings.getString("COVER_PATH", null);
-                    if (path != null) {
-                        new LoadCover().execute(path);
+                    break;
+                case "APPLY_COVER":
+                    // check if there is metadata art possible to load
+                    if (mMediaControllerCompat != null && mMediaControllerCompat.getMetadata() != null) {
+                        if(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART) != null){
+                            coverArt.setImageBitmap(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART));
+                        } else {
+                            coverArt.setImageDrawable(getDrawable(R.drawable.blank_cd));
+                        }
                     }
                     break;
             }
         }
     }
 
+    /**Method that calculated duration from milliseconds to seconds and minutes.
+     * @param duration value in milliseconds.*/
     private String calculateDuration(int duration) {
         int currentDuration = duration / 1000;
         int seconds = currentDuration % 60;
@@ -301,6 +274,9 @@ public class PlaybackActivity extends AppCompatActivity {
         return String.format(Locale.US, "%d:%02d", currentDuration, seconds);
     }
 
+    /**Method that determines current playback type and playback icon. It communicates with
+     * {@link PlaybackLogic} to set appropriate values. Then saves it to shared preferences.
+     * @param playbackIconType int that determines playback type.*/
     private void setPlaybackType(int playbackIconType) {
         switch (playbackIconType) {
             case 0:

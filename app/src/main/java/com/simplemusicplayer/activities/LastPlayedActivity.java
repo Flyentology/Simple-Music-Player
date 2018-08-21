@@ -59,7 +59,6 @@ public class LastPlayedActivity extends AppCompatActivity {
         ListView listView = findViewById(R.id.lastPlayed_songsList);
         lastPlayedAdapter = new PlaylistViewAdapter(this, songsList, PlaylistActivity.readJSON(this));
         listView.setAdapter(lastPlayedAdapter);
-
     }
 
     @Override
@@ -93,9 +92,7 @@ public class LastPlayedActivity extends AppCompatActivity {
         }
     }
 
-    /*
-     * Method used to read and convert saved arraylist from Json
-     */
+    /**Method used to retrieve and convert saved Arraylist.*/
     public ArrayList<Song> readJSON() {
         Gson mGson = new Gson();
         SharedPreferences mSettings = getSharedPreferences("LAST_PLAYED_SONGS", Context.MODE_PRIVATE);

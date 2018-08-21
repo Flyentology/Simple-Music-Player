@@ -15,6 +15,7 @@ import com.simplemusicplayer.adapters.SongListAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
+/**Activity that allows user to choose and add songs to currently edited playlist.*/
 public class AddSongsActivity extends AppCompatActivity {
 
     List<Song> songsList = new ArrayList<>();
@@ -34,6 +35,8 @@ public class AddSongsActivity extends AppCompatActivity {
         songList.setAdapter(songListAdapter);
     }
 
+    /**Method that is called when user presses OK button.
+     * Adds all selected songs to ArrayList and sends it back to {@link PlaylistViewActivity}.*/
     public void onButtonClick(View view) {
         for (int i = 0; i < adapterList.size(); i++) {
             if (adapterList.get(i).isSelected()) {
