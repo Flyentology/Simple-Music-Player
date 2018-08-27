@@ -27,13 +27,18 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestOptions;
 import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.R;
 import com.simplemusicplayer.services.MediaPlaybackService;
 
 import java.util.Locale;
 
-/**Activity that shows song data, cover art, current progress and playback controls.*/
+/**
+ * Activity that shows song data, cover art, current progress and playback controls.
+ */
 public class PlaybackActivity extends AppCompatActivity {
 
     private TextView songTitle, totalDuration, currentDuration;
@@ -43,6 +48,7 @@ public class PlaybackActivity extends AppCompatActivity {
     private ServiceReceiver serviceReceiver;
     private SharedPreferences mSettings;
     private static int playbackIcon = 0;
+    private static Bitmap bitmap;
 
     private static final int STATE_PAUSED = 0;
     private static final int STATE_PLAYING = 1;
@@ -62,11 +68,8 @@ public class PlaybackActivity extends AppCompatActivity {
                 MediaControllerCompat.setMediaController(PlaybackActivity.this, mMediaControllerCompat);
                 // check if there is metadata art possible to load
                 if (mMediaControllerCompat != null && mMediaControllerCompat.getMetadata() != null) {
-                    if(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART) != null){
-                        coverArt.setImageBitmap(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART));
-                    } else {
-                        coverArt.setImageDrawable(getDrawable(R.drawable.blank_cd));
-                    }
+                    Glide.with(PlaybackActivity.this).load(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART))
+                            .error(Glide.with(PlaybackActivity.this).load(R.drawable.blank_cd)).into(coverArt);
                 }
             } catch (RemoteException e) {
 
@@ -180,7 +183,7 @@ public class PlaybackActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onStart(){
+    public void onStart() {
         super.onStart();
     }
 
@@ -222,7 +225,7 @@ public class PlaybackActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onStop(){
+    public void onStop() {
         super.onStop();
         mMediaBrowserCompat.disconnect();
     }
@@ -235,9 +238,6 @@ public class PlaybackActivity extends AppCompatActivity {
 
             switch (intentAction) {
                 case "PROGRESS":
-                    int maxDuration = intent.getIntExtra("TOTAL_DURATION", 0);
-                    songProgress.setMax(maxDuration);
-                    totalDuration.setText(calculateDuration(maxDuration));
                     int currentTime = intent.getIntExtra("TIME", 0);
                     songProgress.setProgress(currentTime);
                     currentDuration.setText(calculateDuration(currentTime));
@@ -250,23 +250,25 @@ public class PlaybackActivity extends AppCompatActivity {
                     break;
                 case "SONG_DATA":
                     songTitle.setText(mSettings.getString("SONG_NAME", "") + " - " + mSettings.getString("ARTIST_NAME", ""));
+                    totalDuration.setText(calculateDuration(mSettings.getInt("TOTAL_DURATION", 0)));
+                    songProgress.setMax(mSettings.getInt("TOTAL_DURATION", 0));
                     break;
                 case "APPLY_COVER":
                     // check if there is metadata art possible to load
                     if (mMediaControllerCompat != null && mMediaControllerCompat.getMetadata() != null) {
-                        if(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART) != null){
-                            coverArt.setImageBitmap(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART));
-                        } else {
-                            coverArt.setImageDrawable(getDrawable(R.drawable.blank_cd));
-                        }
+                        Glide.with(PlaybackActivity.this).load(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART))
+                                .error(Glide.with(PlaybackActivity.this).load(R.drawable.blank_cd)).into(coverArt);
                     }
                     break;
             }
         }
     }
 
-    /**Method that calculated duration from milliseconds to seconds and minutes.
-     * @param duration value in milliseconds.*/
+    /**
+     * Method that calculated duration from milliseconds to seconds and minutes.
+     *
+     * @param duration value in milliseconds.
+     */
     private String calculateDuration(int duration) {
         int currentDuration = duration / 1000;
         int seconds = currentDuration % 60;
@@ -274,9 +276,12 @@ public class PlaybackActivity extends AppCompatActivity {
         return String.format(Locale.US, "%d:%02d", currentDuration, seconds);
     }
 
-    /**Method that determines current playback type and playback icon. It communicates with
+    /**
+     * Method that determines current playback type and playback icon. It communicates with
      * {@link PlaybackLogic} to set appropriate values. Then saves it to shared preferences.
-     * @param playbackIconType int that determines playback type.*/
+     *
+     * @param playbackIconType int that determines playback type.
+     */
     private void setPlaybackType(int playbackIconType) {
         switch (playbackIconType) {
             case 0:

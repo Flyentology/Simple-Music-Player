@@ -9,7 +9,7 @@ import java.util.ArrayList;
 public class Playlist implements Parcelable {
     private ArrayList<Song> playlistSongs;
     private String name;
-    private transient Bitmap playlistArt;
+    private String pathToCover = null;
 
     public Playlist(String name) {
         this.name = name;
@@ -19,6 +19,7 @@ public class Playlist implements Parcelable {
     protected Playlist(Parcel in) {
         playlistSongs = in.createTypedArrayList(Song.CREATOR);
         name = in.readString();
+        pathToCover = in.readString();
     }
 
     public static final Creator<Playlist> CREATOR = new Creator<Playlist>() {
@@ -41,12 +42,12 @@ public class Playlist implements Parcelable {
         return name;
     }
 
-    public Bitmap getPlaylistArt() {
-        return playlistArt;
+    public String getPathToCover() {
+        return pathToCover;
     }
 
-    public void setPlaylistArt(Bitmap playlistArt) {
-        this.playlistArt = playlistArt;
+    public void setPathToCover(String pathToCover) {
+        this.pathToCover = pathToCover;
     }
 
     @Override
@@ -67,7 +68,7 @@ public class Playlist implements Parcelable {
     public void writeToParcel(Parcel parcel, int i) {
         parcel.writeTypedList(playlistSongs);
         parcel.writeString(name);
+        parcel.writeString(pathToCover);
     }
-
 }
 

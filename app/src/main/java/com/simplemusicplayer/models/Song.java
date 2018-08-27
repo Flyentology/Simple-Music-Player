@@ -1,6 +1,5 @@
 package com.simplemusicplayer.models;
 
-import android.graphics.Bitmap;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -15,8 +14,6 @@ public class Song implements Parcelable {
     private String path;
     private long songID;
     private boolean isSelected;
-    private transient Bitmap coverArt;
-
 
     public Song(String songName, String artistName, String album, long songID, String path) {
         this.songName = songName;
@@ -24,14 +21,6 @@ public class Song implements Parcelable {
         this.album = album;
         this.path = path;
         this.songID = songID;
-    }
-
-    public Song(String songName, String artistName, String album, long songID, Bitmap coverArt) {
-        this.songName = songName;
-        this.artistName = artistName;
-        this.album = album;
-        this.songID = songID;
-        this.coverArt = coverArt;
     }
 
     protected Song(Parcel in) {
@@ -68,14 +57,6 @@ public class Song implements Parcelable {
 
     public long getSongID() {
         return songID;
-    }
-
-    public Bitmap getCoverArt() {
-        return coverArt;
-    }
-
-    public void setCoverArt(Bitmap coverArt) {
-        this.coverArt = coverArt;
     }
 
     public String getPath() {

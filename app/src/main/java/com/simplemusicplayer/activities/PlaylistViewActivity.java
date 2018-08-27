@@ -4,24 +4,27 @@ import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.os.RemoteException;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicBlur;
+import android.support.annotation.Nullable;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
@@ -31,7 +34,12 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.simplemusicplayer.LoadCovers;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.target.Target;
 import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
 import com.simplemusicplayer.adapters.PlaylistViewAdapter;
@@ -40,21 +48,25 @@ import com.simplemusicplayer.models.Playlist;
 import com.simplemusicplayer.models.Song;
 import com.simplemusicplayer.services.MediaPlaybackService;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**Activity that shows selected playlist content using {@link PlaylistViewAdapter}.*/
+/**
+ * Activity that shows selected playlist content using {@link PlaylistViewAdapter}.
+ */
 public class PlaylistViewActivity extends AppCompatActivity {
 
     private ArrayList<Song> playlistSongs;
     private final int RECEIVE_SONGS = 1;
     private PlaylistViewAdapter playlistAdapter;
     private ImageView coverArt;
-    private Handler mHandler;
     private RelativeLayout relativeLayout;
     private int playlistIndex;
     private ArrayList<Playlist> playlists;
+    private static Handler mHandler;
+    private static int loadIndex = 0;
 
     private static MediaBrowserCompat mMediaBrowserCompat;
     private static MediaControllerCompat mMediaControllerCompat;
@@ -168,39 +180,13 @@ public class PlaylistViewActivity extends AppCompatActivity {
             }
         });
 
-        mHandler = new Handler() {
-            // Wait for message from thread
-            /**Method that waits for message if song cover was loaded successfully
-             * It assigns bitmap to image view or empty cover
-             * Creates duplicate and applies RenderScript blur effect that's used for background*/
-            public void handleMessage(android.os.Message msg) {
-                // check if song of msg.what index has cover art to display
-                if (playlistSongs.get(msg.what).getCoverArt() != null) {
-                    Bitmap cover = playlistSongs.get(msg.what).getCoverArt();
-                    coverArt.setImageBitmap(cover); // Assign bitmap to imageView
-                    Bitmap clone = Bitmap.createBitmap(cover, 20, 20, 100, 100); // Create cropped clone of existing bitmap
-                    // Prepare RenderScript and script to blur cloned bitmap
-                    RenderScript renderScript = RenderScript.create(PlaylistViewActivity.this);
-                    final Allocation input = Allocation.createFromBitmap(renderScript, clone);
-                    final Allocation output = Allocation.createTyped(renderScript, input.getType());
-                    final ScriptIntrinsicBlur script = ScriptIntrinsicBlur.create(renderScript, Element.U8_4(renderScript));
-                    script.setRadius(16f);
-                    script.setInput(input);
-                    script.forEach(output);
-                    output.copyTo(clone);
-                    // Create drawable and assign it as background
-                    Drawable drawable = new BitmapDrawable(getResources(), clone);
-                    relativeLayout.setBackground(drawable);
-                } else {
-                    // put empty cover in image view
-                    coverArt.setImageDrawable(getDrawable(R.drawable.ic_empty_cover));
-                }
-            }
-        };
+        mHandler = new IncomingHandler(this);
+        loadImage(0, mHandler);
     }
 
+
     @Override
-    public void onStart(){
+    public void onStart() {
         super.onStart();
         mMediaBrowserCompat = new MediaBrowserCompat(PlaylistViewActivity.this, new ComponentName(PlaylistViewActivity.this, MediaPlaybackService.class),
                 mMediaBrowserCompatConnectionCallback, PlaylistViewActivity.this.getIntent().getExtras());
@@ -211,10 +197,6 @@ public class PlaylistViewActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         // Load cover for playlist if it's available
-        if (playlistSongs.size() > 0) {
-            LoadCovers loadCovers = new LoadCovers(playlistSongs, mHandler, 0, playlistSongs.size(), 200, 200, false);
-            loadCovers.start();
-        }
     }
 
     @Override
@@ -224,7 +206,7 @@ public class PlaylistViewActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onStop(){
+    public void onStop() {
         super.onStop();
         mMediaBrowserCompat.disconnect();
     }
@@ -241,7 +223,7 @@ public class PlaylistViewActivity extends AppCompatActivity {
             case RECEIVE_SONGS: {
                 if (resultCode == Activity.RESULT_OK) {
                     ArrayList<Song> temporaryList = data.getParcelableArrayListExtra("SONGS_TO_ADD");
-                    if(temporaryList.size() > 0){
+                    if (temporaryList.size() > 0) {
                         ArrayList<Song> duplicates = new ArrayList<>();
                         Set<Song> songsToAdd = new LinkedHashSet<>(temporaryList);
                         for (Song song : playlistSongs) {
@@ -253,8 +235,8 @@ public class PlaylistViewActivity extends AppCompatActivity {
                         playlists.get(playlistIndex).getPlaylistSongs().addAll(songsToAdd);
                         // save playlists after adding song to one of them
                         PlaylistActivity.writeJSON(playlists, PlaylistViewActivity.this);
-                        LoadCovers loadCovers = new LoadCovers(playlistSongs, mHandler, 0, playlistSongs.size(), 200, 200, false);
-                        loadCovers.start();
+                        //Load cover
+                        loadImage(0, mHandler);
                         playlistAdapter.notifyDataSetChanged();
                     }
                 }
@@ -262,4 +244,70 @@ public class PlaylistViewActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Method assigns bitmap to image view or empty cover.
+     * Creates duplicate and applies RenderScript blur effect that's used for background
+     */
+    private void setBackgroundImage(Drawable resource) {
+
+        BitmapDrawable cover = (BitmapDrawable) resource;
+        Bitmap toClone = cover.getBitmap();
+        Bitmap clone = toClone.copy(toClone.getConfig(), true);// Create cropped clone of existing bitmap
+        // Prepare RenderScript and script to blur cloned bitmap
+        RenderScript renderScript = RenderScript.create(PlaylistViewActivity.this);
+        final Allocation input = Allocation.createFromBitmap(renderScript, clone);
+        final Allocation output = Allocation.createTyped(renderScript, input.getType());
+        final ScriptIntrinsicBlur script = ScriptIntrinsicBlur.create(renderScript, Element.U8_4(renderScript));
+        script.setRadius(16f);
+        script.setInput(input);
+        script.forEach(output);
+        output.copyTo(clone);
+        // Create drawable and assign it as background
+        Drawable drawable = new BitmapDrawable(getResources(), clone);
+        relativeLayout.setBackground(drawable);
+    }
+
+    private void loadImage(final int index, final Handler mHandler) {
+        if (index < playlistSongs.size()) {
+            Glide.with(PlaylistViewActivity.this).load(playlistSongs.get(index).getPath()).apply(new RequestOptions().override(120, 120)).listener(new RequestListener<Drawable>() {
+                @Override
+                public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
+                    mHandler.obtainMessage(0).sendToTarget();
+                    return false;
+                }
+
+                @Override
+                public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                    loadIndex = 0;
+                    setBackgroundImage(resource);
+                    playlists.get(playlistIndex).setPathToCover(playlistSongs.get(index).getPath());
+                    return false;
+                }
+            }).into(coverArt);
+        } else {
+            playlists.get(playlistIndex).setPathToCover(null);
+            Glide.with(PlaylistViewActivity.this).load(R.drawable.ic_empty_cover).into(coverArt);
+        }
+    }
+
+    static class IncomingHandler extends Handler {
+
+        private final WeakReference<PlaylistViewActivity> playlistViewActivity;
+
+        public IncomingHandler(PlaylistViewActivity playlistViewActivity) {
+            this.playlistViewActivity = new WeakReference<>(playlistViewActivity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            PlaylistViewActivity activity = playlistViewActivity.get();
+            if (msg.what == 0) {
+                loadIndex++;
+                Log.d("ddd", " " + loadIndex);
+                activity.loadImage(loadIndex, mHandler);
+            } else {
+                loadIndex = 0;
+            }
+        }
+    }
 }

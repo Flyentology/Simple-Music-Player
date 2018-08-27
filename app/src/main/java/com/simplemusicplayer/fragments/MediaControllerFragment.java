@@ -24,6 +24,8 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.devadvance.circularseekbar.CircularSeekBar;
 import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.R;
@@ -34,7 +36,9 @@ import com.squareup.picasso.Picasso;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
-/**Fragment that appears in every activity and indicates informations about song, playback progress and gives the user controls.*/
+/**
+ * Fragment that appears in every activity and indicates informations about song, playback progress and gives the user controls.
+ */
 public class MediaControllerFragment extends Fragment {
 
     private View v;
@@ -62,12 +66,8 @@ public class MediaControllerFragment extends Fragment {
                 MediaControllerCompat.setMediaController(getActivity(), mMediaControllerCompat);
                 // check if there is metadata art possible to load
                 if (mMediaControllerCompat != null && mMediaControllerCompat.getMetadata() != null) {
-                    if(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART) != null){
-                        circleImageView.setImageBitmap(Bitmap.createScaledBitmap(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
-                                , 80, 80, true));
-                    } else {
-                        circleImageView.setImageDrawable(getActivity().getDrawable(R.drawable.ic_empty_cover));
-                    }
+                    Glide.with(getActivity()).load(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART)).apply(new RequestOptions().override(80, 80).
+                            placeholder(R.drawable.ic_empty_cover)).into(circleImageView);
                 }
             } catch (RemoteException e) {
 
@@ -105,8 +105,10 @@ public class MediaControllerFragment extends Fragment {
         mMediaBrowserCompat.connect();
     }
 
-    /**Method used when inflating the view and initialising UI elements.
-     * Also sets up onClickListeners for various elements.*/
+    /**
+     * Method used when inflating the view and initialising UI elements.
+     * Also sets up onClickListeners for various elements.
+     */
     private void configureFragmentUI() {
         ImageButton playNext = v.findViewById(R.id.playNext);
         ImageButton playPrevious = v.findViewById(R.id.playPrevious);
@@ -209,17 +211,18 @@ public class MediaControllerFragment extends Fragment {
         mMediaBrowserCompat.disconnect();
     }
 
-    /**Nested BroadcastReceiver to handle incoming data about currently playing song.*/
+    /**
+     * Nested BroadcastReceiver to handle incoming data about currently playing song.
+     */
     private class ServiceReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            String intentAction = intent.getAction();
 
-            switch (intentAction) {
+            switch (intent.getAction()) {
                 case "PROGRESS":
-                    int maxDuration = intent.getIntExtra("TOTAL_DURATION", 0);
-                    playbackProgress.setMax(maxDuration);
+                    //int maxDuration = intent.getIntExtra("TOTAL_DURATION", 0);
+                    //playbackProgress.setMax(maxDuration);
                     int currentTime = intent.getIntExtra("TIME", 0);
                     playbackProgress.setProgress(currentTime);
                     break;
@@ -232,16 +235,13 @@ public class MediaControllerFragment extends Fragment {
                 case "SONG_DATA":
                     songName.setText(mSettings.getString("SONG_NAME", ""));
                     artistName.setText(mSettings.getString("ARTIST_NAME", ""));
+                    playbackProgress.setMax(mSettings.getInt("TOTAL_DURATION", 0));
                     break;
                 case "APPLY_COVER":
                     // check if there is metadata art possible to load
                     if (mMediaControllerCompat != null && mMediaControllerCompat.getMetadata() != null) {
-                        if(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART) != null){
-                            circleImageView.setImageBitmap(Bitmap.createScaledBitmap(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART)
-                                    , 80, 80, true));
-                        } else {
-                            circleImageView.setImageDrawable(getActivity().getDrawable(R.drawable.ic_empty_cover));
-                        }
+                        Glide.with(getActivity()).load(mMediaControllerCompat.getMetadata().getBitmap(MediaMetadataCompat.METADATA_KEY_ART)).apply(new RequestOptions().override(80, 80).
+                                placeholder(R.drawable.ic_empty_cover)).into(circleImageView);
                     }
                     break;
             }

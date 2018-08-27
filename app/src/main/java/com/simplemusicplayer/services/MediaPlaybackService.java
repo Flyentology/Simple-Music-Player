@@ -27,6 +27,13 @@ import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.target.Target;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.simplemusicplayer.MediaStyleHelper;
@@ -38,6 +45,7 @@ import com.simplemusicplayer.models.Song;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public class MediaPlaybackService extends MediaBrowserServiceCompat implements MediaPlayer.OnCompletionListener {
 
@@ -47,7 +55,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
     public static Song songToPlay;
     public static boolean isRunning = true;
     private static boolean isLoaded = false;
-    private SongUtils.LoadCover loadCover;
+    final MediaMetadataCompat.Builder metadataBuilder = new MediaMetadataCompat.Builder();
 
     @Override
     public void onCreate() {
@@ -307,35 +315,39 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
     }
 
     private void initMediaSessionMetadata(Song song) {
-        if (loadCover != null) {
-            loadCover.cancel(true);
-        }
-        isLoaded = false;
         final Song songToLoad = song;
-        final MediaMetadataCompat.Builder metadataBuilder = new MediaMetadataCompat.Builder();
 
-        loadCover = new SongUtils.LoadCover(400, 400, new SongUtils.LoadCover.AsyncResponse() {
+        Glide.with(MediaPlaybackService.this).asBitmap().load(songToLoad.getPath()).listener(new RequestListener<Bitmap>() {
+            @Override
+            public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Bitmap> target, boolean isFirstResource) {
+                putMetadata(songToLoad, null);
+                return false;
+            }
 
             @Override
-            public void processFinish(Bitmap bitmap) {
-                metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-                //lock screen icon for pre lollipop
-                metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap);
-                //title and subtitle for notification
-                metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, songToLoad.getSongName());
-                metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, songToLoad.getArtistName());
-                //title and subtitle for lockscreen
-                metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, songToLoad.getSongName() + " - " + songToLoad.getArtistName());
-
-                metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1);
-                metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);
-                mMediaSessionCompat.setMetadata(metadataBuilder.build());
-                isLoaded = true;
-                sendBroadcast(new Intent("APPLY_COVER"));
-                startForeground(1337, showPlayingNotification());
+            public boolean onResourceReady(Bitmap resource, Object model, Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
+                putMetadata(songToLoad, resource);
+                return true;
             }
-        });
-        loadCover.execute(song.getPath());
+        }).into(250, 250);
+    }
+
+    private void putMetadata(Song songToSave, Bitmap coverArt) {
+        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+        //lock screen icon for pre lollipop
+        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, coverArt);
+        //title and subtitle for notification
+        metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, songToSave.getSongName());
+        metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, songToSave.getArtistName());
+        //title and subtitle for lockscreen
+        metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, songToSave.getSongName() + " - " + songToSave.getArtistName());
+
+        //metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1);
+        //metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);
+        mMediaSessionCompat.setMetadata(metadataBuilder.build());
+        isLoaded = true;
+        sendBroadcast(new Intent("APPLY_COVER"));
+        startForeground(1337, showPlayingNotification());
     }
 
     @Override
@@ -372,22 +384,24 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
             mEditor.putString("COVER_PATH", coverPath);
             mEditor.putString("SONG_NAME", songName);
             mEditor.putString("ARTIST_NAME", artistName);
+            mEditor.putInt("TOTAL_DURATION", mMediaPlayer.getDuration());
             mEditor.apply();
             Intent songData = new Intent("SONG_DATA");
             sendBroadcast(songData);
+            int songPosition;
 
             while (mMediaPlayer.isPlaying()) {
-                int songPosition = mMediaPlayer.getCurrentPosition();
+                songPosition = mMediaPlayer.getCurrentPosition();
                 // save song progress and total duration in shared preferences
                 mEditor.putInt("CURRENT_POSITION", songPosition);
-                mEditor.putInt("TOTAL_DURATION", mMediaPlayer.getDuration());
+                //mEditor.putInt("TOTAL_DURATION", mMediaPlayer.getDuration());
                 // send current progress and total duration to listening fragment/activity
                 Intent intent = new Intent("PROGRESS");
                 intent.putExtra("TIME", songPosition);
-                intent.putExtra("TOTAL_DURATION", mMediaPlayer.getDuration());
+                //intent.putExtra("TOTAL_DURATION", mMediaPlayer.getDuration());
                 sendBroadcast(intent);
                 try {
-                    Thread.sleep(400);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
 
                 }

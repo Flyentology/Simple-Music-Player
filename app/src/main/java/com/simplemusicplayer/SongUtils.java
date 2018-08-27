@@ -1,6 +1,7 @@
 package com.simplemusicplayer;
 
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -8,17 +9,25 @@ import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
+import android.util.Log;
 
 import com.simplemusicplayer.models.Song;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**Class used for utility methods.*/
+/**
+ * Class used for utility methods.
+ */
 public class SongUtils {
 
-    /**Method that queries for media files in a phone and returns list of songs depends of sort type.*/
+    /**
+     * Method that queries for media files in a phone and returns list of songs depends of sort type.
+     */
     public static List<Song> fillSongList(Context context, int sortOrder) {
         List<Song> songsList = new ArrayList<>();
         Cursor cursor;
@@ -39,14 +48,16 @@ public class SongUtils {
             int titleColumn = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE);
             int artistColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST);
             int albumColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM);
+            int albumIDColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID);
             int idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
-            int dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
             do {
                 long id = cursor.getLong(idColumn);
+                long albumID = cursor.getLong(albumIDColumn);
                 String thisTitle = cursor.getString(titleColumn);
                 String artistName = cursor.getString(artistColumn);
                 String albumName = cursor.getString(albumColumn);
-                String path = cursor.getString(dataColumn);
+                String path = "content://media/external/audio/albumart/" + albumID;
+
                 //add songs to the list
                 songsList.add(new Song(thisTitle, artistName, albumName, id, path));
             } while (cursor.moveToNext());
@@ -54,65 +65,5 @@ public class SongUtils {
             //cursors should be freed up after use
         }
         return songsList;
-    }
-
-    /**
-     * Nested class used to asynchronously load one cover art bitmap.
-     * Size is passed in constructor.
-     */
-    public static class LoadCover extends AsyncTask<String, Integer, Bitmap> {
-
-        private int width;
-        private int height;
-
-        public interface AsyncResponse {
-            public void processFinish(Bitmap output);
-        }
-
-        public AsyncResponse delegate = null;
-
-        public LoadCover(int width, int height, AsyncResponse delegate) {
-            this.width = width;
-            this.height = height;
-            this.delegate = delegate;
-        }
-
-        @Override
-        protected Bitmap doInBackground(String... strings) {
-            String path = strings[0];
-            MediaMetadataRetriever metaRetreiver = new MediaMetadataRetriever();
-            metaRetreiver.setDataSource(path);
-            byte[] art = metaRetreiver.getEmbeddedPicture();
-            if (art != null) {
-                BitmapFactory.Options opt = new BitmapFactory.Options();
-                opt.inJustDecodeBounds = true; //just check size of image
-                BitmapFactory.decodeByteArray(art, 0, art.length, opt);
-
-                // assign values of image
-                int imageHeight = opt.outHeight;
-                int imageWidth = opt.outWidth;
-
-                //condition to determine max inSample size
-                if (imageHeight > height || imageWidth > width) {
-                    final int halfHeight = imageHeight / 2;
-                    final int halfWidth = imageWidth / 2;
-                    int inSampleSize = 1;
-                    while ((halfHeight / inSampleSize) >= height
-                            && (halfWidth / inSampleSize) >= width) {
-                        inSampleSize *= 2;
-                    }
-                    opt.inSampleSize = inSampleSize;
-                }
-                opt.inJustDecodeBounds = false;
-                return BitmapFactory.decodeByteArray(art, 0, art.length, opt);
-            } else {
-                return null;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            delegate.processFinish(bitmap);
-        }
     }
 }

@@ -8,21 +8,15 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.SearchManager;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.RemoteException;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.NotificationCompat;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v7.preference.PreferenceManager;
@@ -31,7 +25,6 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -43,7 +36,6 @@ import android.widget.Toast;
 
 import com.simplemusicplayer.PlaybackLogic;
 import com.simplemusicplayer.SongUtils;
-import com.simplemusicplayer.LoadCovers;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
 import com.simplemusicplayer.fragments.SettingsFragment;
 import com.simplemusicplayer.services.MediaPlaybackService;
@@ -68,8 +60,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private SongAdapter songAdapter;
     private List<Song> songsListView = new ArrayList<>();
     private List<Song> baseSongList = new ArrayList<>();
-    private Handler mHandler;
-    private int threadCount = 0;
     private Fragment settingsFragment;
 
     private static MediaBrowserCompat mMediaBrowserCompat;
@@ -110,26 +100,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         fragmentTransaction.add(R.id.mediaControllerContainer, mediaControllerFragment);
         fragmentTransaction.commit();
 
-        mHandler = new Handler() {
-            int count = 0;
-
-            //wait for messages from each thread and refresh list
-            public void handleMessage(android.os.Message msg) {
-                switch (msg.what) {
-                    case 0:
-                        count++;
-                        if (count == threadCount) {
-                            songsListView.clear();
-                            songsListView.addAll(baseSongList);
-                            songAdapter.notifyDataSetChanged();
-                            count = 0;
-                            threadCount = 0;
-                        }
-                        break;
-                }
-            }
-        };
-
         ListView mainMenu = findViewById(R.id.mainMenu);
         ArrayList<String> menuList = new ArrayList<>();
         ArrayAdapter<String> menuAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, menuList);
@@ -157,7 +127,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             songsList.setAdapter(songAdapter);
             songsListView.addAll(baseSongList);
             songAdapter.notifyDataSetChanged();
-            startThreads();
         }
 
         createNotificationChannel();
@@ -238,7 +207,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                             songsList.setAdapter(songAdapter);
                             songsListView.addAll(baseSongList);
                             songAdapter.notifyDataSetChanged();
-                            startThreads();
                         } else {
                             Toast.makeText(this, "no permission granted", Toast.LENGTH_LONG).show();
                             finish();
@@ -354,8 +322,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                                         baseSongList.clear();
                                         baseSongList = SongUtils.fillSongList(MainActivity.this, whichSortType);
                                         songsListView.addAll(baseSongList);
-                                        stopThreads.set(false);
-                                        startThreads();
                                     }
                                     break;
                                 case 1:
@@ -364,8 +330,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                                         baseSongList.clear();
                                         baseSongList = SongUtils.fillSongList(MainActivity.this, whichSortType);
                                         songsListView.addAll(baseSongList);
-                                        stopThreads.set(false);
-                                        startThreads();
                                     } else if (which == 1) {
                                         Collections.reverse(baseSongList);
                                         songsListView.addAll(baseSongList);
@@ -378,16 +342,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                     });
             AlertDialog dialog = builder.create();
             dialog.show();
-        }
-    }
-
-    /**Method that starts {@link com.simplemusicplayer.LoadCovers} threads with chunk size of 200.*/
-    private void startThreads() {
-        int chunkSize = 200;
-        for (int i = 0; i < songsListView.size(); i += chunkSize) {
-            LoadCovers loadCovers = new LoadCovers(songsListView, mHandler, i, Math.min(i + chunkSize, songsListView.size()), 80, 80, true);
-            loadCovers.start();
-            threadCount++;
         }
     }
 }

@@ -8,13 +8,17 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.simplemusicplayer.models.Playlist;
 import com.simplemusicplayer.R;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**Class that extends BaseAdapter and returns view of playlist item on grid view.*/
+/**
+ * Class that extends BaseAdapter and returns view of playlist item on grid view.
+ */
 public class PlaylistAdapter extends BaseAdapter {
 
     private List<Playlist> playlists;
@@ -63,12 +67,11 @@ public class PlaylistAdapter extends BaseAdapter {
         } else {
             holder = (ViewHolder) convertView.getTag();
 
-            if (playlist.getPlaylistArt() != null) {
-                holder.image.setImageBitmap(playlist.getPlaylistArt());
+            if(playlist.getPathToCover() != null){
+                Glide.with(mContext).load(playlist.getPathToCover()).apply(new RequestOptions().override(200, 200)).into(holder.image);
             } else {
-                holder.image.setImageDrawable(mContext.getResources().getDrawable(R.drawable.ic_empty_cover));
+                Glide.with(mContext).load(R.drawable.ic_empty_cover).into(holder.image);
             }
-
             holder.name.setText(playlist.getName());
             holder.songsCount.setText(mContext.getResources().getString(R.string.playlist_count) + Integer.toString(playlist.getCount()));
         }

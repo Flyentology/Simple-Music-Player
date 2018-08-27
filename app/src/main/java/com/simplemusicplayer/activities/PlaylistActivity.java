@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.os.Parcelable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -25,13 +26,12 @@ import android.widget.GridView;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import com.simplemusicplayer.LoadCovers;
 import com.simplemusicplayer.fragments.MediaControllerFragment;
 import com.simplemusicplayer.models.Playlist;
 import com.simplemusicplayer.adapters.PlaylistAdapter;
 import com.simplemusicplayer.R;
-import com.simplemusicplayer.models.Song;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +42,6 @@ public class PlaylistActivity extends AppCompatActivity {
     private PlaylistAdapter playlistAdapter;
     private final int VIEW_PLAYLIST = 1;
     private int playlistPosition = 0;
-    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,24 +69,8 @@ public class PlaylistActivity extends AppCompatActivity {
         transaction.add(R.id.playlistActivity_container, mediaControllerFragment);
         transaction.commit();
 
-        mHandler = new Handler() {
-            //wait for messages from each thread and refresh list
-            public void handleMessage(android.os.Message msg) {
-                Log.d("ddd", "imhere");
-                switch (msg.what) {
-                    case 0:
-                        playlistAdapter.notifyDataSetChanged();
-                        break;
-                }
-            }
-        };
-
         if (readJSON(PlaylistActivity.this) != null) {
             playlists.addAll(readJSON(PlaylistActivity.this));
-            for (Playlist playlist : playlists) {
-                LoadCovers loadCovers = new LoadCovers(mHandler, playlist, 130, 130);
-                loadCovers.start();
-            }
         }
 
         playlistAdapter = new PlaylistAdapter(this, playlists);
@@ -162,10 +145,6 @@ public class PlaylistActivity extends AppCompatActivity {
                 if (resultCode == Activity.RESULT_OK) {
                     playlists.clear();
                     playlists.addAll(readJSON(PlaylistActivity.this));
-                    if (playlists.get(playlistPosition).getPlaylistArt() == null) {
-                        LoadCovers loadCovers = new LoadCovers(mHandler, playlists.get(playlistPosition), 130, 130);
-                        loadCovers.start();
-                    }
                     writeJSON(playlists, PlaylistActivity.this);
                     playlistAdapter.notifyDataSetChanged();
                 } else if (resultCode == 11) {
@@ -203,5 +182,4 @@ public class PlaylistActivity extends AppCompatActivity {
         String loadValue = mSettings.getString("Playlists", null);
         return mGson.fromJson(loadValue, collectionType);
     }
-
 }

@@ -1,7 +1,6 @@
 package com.simplemusicplayer.adapters;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
@@ -11,13 +10,16 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.simplemusicplayer.R;
 import com.simplemusicplayer.models.Song;
 
-import java.util.ArrayList;
 import java.util.List;
 
-/**Class extending ArrayAdapter used to display Song item in MainActivity.*/
+/**
+ * Class extending ArrayAdapter used to display Song item in MainActivity.
+ */
 public class SongAdapter extends ArrayAdapter {
 
     private Context mContext;
@@ -38,12 +40,7 @@ public class SongAdapter extends ArrayAdapter {
 
         Song currentSong = songList.get(position);
         ImageView image = listItem.findViewById(R.id.imageView_cover);
-        if (currentSong.getCoverArt() != null) {
-            image.setImageBitmap(currentSong.getCoverArt());
-        } else {
-            image.setBackgroundColor(Color.parseColor("#D3D3D3"));
-            image.setImageResource(R.drawable.ic_empty_cover);
-        }
+        Glide.with(mContext).load(currentSong.getPath()).apply(new RequestOptions().placeholder(R.drawable.ic_empty_cover).override(80,80)).into(image);
 
         TextView name = listItem.findViewById(R.id.textView_name);
         name.setText(currentSong.getSongName());
