@@ -11,16 +11,18 @@ public class Song implements Parcelable {
     private String songName;
     private String artistName;
     private String album;
+    private String pathToFile;
     private String path;
     private long songID;
     private boolean isSelected;
 
-    public Song(String songName, String artistName, String album, long songID, String path) {
+    public Song(String songName, String artistName, String album, long songID, String path, String pathToFile) {
         this.songName = songName;
         this.artistName = artistName;
         this.album = album;
         this.path = path;
         this.songID = songID;
+        this.pathToFile = pathToFile;
     }
 
     protected Song(Parcel in) {
@@ -29,6 +31,7 @@ public class Song implements Parcelable {
         album = in.readString();
         songID = in.readLong();
         path = in.readString();
+        pathToFile = in.readString();
     }
 
     public static final Creator<Song> CREATOR = new Creator<Song>() {
@@ -63,8 +66,8 @@ public class Song implements Parcelable {
         return path;
     }
 
-    public void setPath(String path) {
-        this.path = path;
+    public String getPathToFile() {
+        return pathToFile;
     }
 
     public boolean isSelected() {
@@ -92,6 +95,7 @@ public class Song implements Parcelable {
         dest.writeString(album);
         dest.writeLong(songID);
         dest.writeString(path);
+        dest.writeString(pathToFile);
     }
 
     @Override

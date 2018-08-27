@@ -116,7 +116,7 @@ public class PlaylistViewAdapter extends BaseAdapter {
                                         notifyDataSetChanged();
                                         break;
                                     case 2:
-                                        String filePath = songs.get(viewPosition).getPath();
+                                        String filePath = songs.get(viewPosition).getPathToFile();
                                         Uri uri = FileProvider.getUriForFile(mContext, "com.simplemusicplayer.fileprovider", new File(filePath));
                                         Intent share = new Intent(Intent.ACTION_SEND);
                                         share.setType("audio/*");

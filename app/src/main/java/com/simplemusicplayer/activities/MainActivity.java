@@ -211,7 +211,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                             Toast.makeText(this, "no permission granted", Toast.LENGTH_LONG).show();
                             finish();
                         }
-
                     }
                     return;
                 }
@@ -290,7 +289,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                         baseSongList.get(i).getArtistName(),
                         baseSongList.get(i).getAlbum(),
                         baseSongList.get(i).getSongID(),
-                        baseSongList.get(i).getPath()));
+                        baseSongList.get(i).getPath(),
+                        baseSongList.get(i).getPathToFile()));
             }
         }
         songAdapter.notifyDataSetChanged();

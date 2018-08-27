@@ -50,6 +50,7 @@ public class SongUtils {
             int albumColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM);
             int albumIDColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID);
             int idColumn = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
+            int pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
             do {
                 long id = cursor.getLong(idColumn);
                 long albumID = cursor.getLong(albumIDColumn);
@@ -57,9 +58,10 @@ public class SongUtils {
                 String artistName = cursor.getString(artistColumn);
                 String albumName = cursor.getString(albumColumn);
                 String path = "content://media/external/audio/albumart/" + albumID;
+                String pathToFile = cursor.getString(pathColumn);
 
                 //add songs to the list
-                songsList.add(new Song(thisTitle, artistName, albumName, id, path));
+                songsList.add(new Song(thisTitle, artistName, albumName, id, path, pathToFile));
             } while (cursor.moveToNext());
             cursor.close();
             //cursors should be freed up after use
