@@ -31,9 +31,12 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.FutureTarget;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.target.Target;
+import com.bumptech.glide.request.transition.Transition;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.simplemusicplayer.MediaStyleHelper;
@@ -320,30 +323,30 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
         Glide.with(MediaPlaybackService.this).asBitmap().load(songToLoad.getPath()).listener(new RequestListener<Bitmap>() {
             @Override
             public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Bitmap> target, boolean isFirstResource) {
-                putMetadata(songToLoad, null);
+                //lock screen icon for pre lollipop
+                metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, null);
+                putMetadata(songToLoad);
                 return false;
             }
 
             @Override
             public boolean onResourceReady(Bitmap resource, Object model, Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
-                putMetadata(songToLoad, resource);
+                //lock screen icon for pre lollipop
+                metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, resource);
+                putMetadata(songToLoad);
                 return true;
             }
         }).into(250, 250);
     }
 
-    private void putMetadata(Song songToSave, Bitmap coverArt) {
+    private void putMetadata(Song songToSave) {
         metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-        //lock screen icon for pre lollipop
-        metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, coverArt);
         //title and subtitle for notification
         metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, songToSave.getSongName());
         metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, songToSave.getArtistName());
         //title and subtitle for lockscreen
         metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, songToSave.getSongName() + " - " + songToSave.getArtistName());
 
-        //metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, 1);
-        //metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 1);
         mMediaSessionCompat.setMetadata(metadataBuilder.build());
         isLoaded = true;
         sendBroadcast(new Intent("APPLY_COVER"));
