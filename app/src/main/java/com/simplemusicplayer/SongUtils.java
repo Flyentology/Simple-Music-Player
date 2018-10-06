@@ -25,19 +25,21 @@ import java.util.List;
  */
 public class SongUtils {
 
+    public static boolean sortByTitle = false;
+    public static boolean alreadySorted = false;
     /**
      * Method that queries for media files in a phone and returns list of songs depends of sort type.
      */
-    public static List<Song> fillSongList(Context context, int sortOrder) {
+    public static List<Song> fillSongList(Context context, String sortOrder) {
         List<Song> songsList = new ArrayList<>();
         Cursor cursor;
         ContentResolver contentResolver = context.getContentResolver();
         Uri uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI; //uri is basically URL, so points to a place in the phone where media is stored
         //choose sort order
-        if (sortOrder == 0) {
-            cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.DATE_ADDED + " COLLATE NOCASE ASC"); //query for audio files on the phone
+        if (sortByTitle) {
+            cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.ARTIST + " " + sortOrder); //query for audio files on the phone
         } else {
-            cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.TITLE + " COLLATE NOCASE ASC"); //query for audio files on the phone
+            cursor = contentResolver.query(uri, null, null, null, MediaStore.Audio.Media.DATE_ADDED + " " + sortOrder); //query for audio files on the phone
         }
         if (cursor == null) {
             // query failed

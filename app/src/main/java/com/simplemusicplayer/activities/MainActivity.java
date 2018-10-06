@@ -56,7 +56,6 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
     private boolean playShuffle = false;
     private boolean listChanged = true;
     private static int whichSortType = 0;
-    public static AtomicBoolean stopThreads = new AtomicBoolean(false);
     private SongAdapter songAdapter;
     private List<Song> songsListView = new ArrayList<>();
     private List<Song> baseSongList = new ArrayList<>();
@@ -122,7 +121,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
 
             }
         } else {
-            baseSongList = SongUtils.fillSongList(this, 0);
+            baseSongList = SongUtils.fillSongList(this, "COLLATE NOCASE ASC");
+            SongUtils.alreadySorted = true;
             songAdapter = new SongAdapter(this, this, songsListView);
             songsList.setAdapter(songAdapter);
             songsListView.addAll(baseSongList);
@@ -202,7 +202,8 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
                         if (ContextCompat.checkSelfPermission(MainActivity.this,
                                 Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_DENIED) {
                             Toast.makeText(this, "permission granted", Toast.LENGTH_LONG).show();
-                            baseSongList = SongUtils.fillSongList(this, 0);
+                            baseSongList = SongUtils.fillSongList(this, "COLLATE NOCASE ASC");
+                            SongUtils.alreadySorted = true;
                             songAdapter = new SongAdapter(this, this, songsListView);
                             songsList.setAdapter(songAdapter);
                             songsListView.addAll(baseSongList);
@@ -229,7 +230,9 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
         }
     }
 
-    /**Method used to create notification channel for Android newer than Nougat*/
+    /**
+     * Method used to create notification channel for Android newer than Nougat
+     */
     private void createNotificationChannel() {
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
@@ -310,30 +313,34 @@ public class MainActivity extends AppCompatActivity implements SearchView.OnQuer
             builder.setTitle(R.string.sort_songs)
                     .setItems(R.array.sort_type, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
-                            stopThreads.set(true);
                             songsListView.clear();
-                            switch (whichSortType) {
+                            baseSongList.clear();
+                            switch (which) {
                                 case 0:
-                                    if (which == 0) {
-                                        Collections.reverse(baseSongList);
-                                        songsListView.addAll(baseSongList);
-                                    } else if (which == 1) {
-                                        whichSortType = 1;
-                                        baseSongList.clear();
-                                        baseSongList = SongUtils.fillSongList(MainActivity.this, whichSortType);
-                                        songsListView.addAll(baseSongList);
+                                    if (SongUtils.sortByTitle) {
+                                        SongUtils.alreadySorted = false;
+                                        SongUtils.sortByTitle = false;
                                     }
+                                    if (SongUtils.alreadySorted) {
+                                        baseSongList.addAll(SongUtils.fillSongList(MainActivity.this, "COLLATE NOCASE DESC"));
+                                    } else {
+                                        baseSongList.addAll(SongUtils.fillSongList(MainActivity.this, "COLLATE NOCASE ASC"));
+                                    }
+                                    songsListView.addAll(baseSongList);
+                                    SongUtils.alreadySorted = !SongUtils.alreadySorted;
                                     break;
                                 case 1:
-                                    if (which == 0) {
-                                        whichSortType = 0;
-                                        baseSongList.clear();
-                                        baseSongList = SongUtils.fillSongList(MainActivity.this, whichSortType);
-                                        songsListView.addAll(baseSongList);
-                                    } else if (which == 1) {
-                                        Collections.reverse(baseSongList);
-                                        songsListView.addAll(baseSongList);
+                                    if (!SongUtils.sortByTitle) {
+                                        SongUtils.alreadySorted = false;
+                                        SongUtils.sortByTitle = true;
                                     }
+                                    if (SongUtils.alreadySorted) {
+                                        baseSongList.addAll(SongUtils.fillSongList(MainActivity.this, "COLLATE NOCASE DESC"));
+                                    } else {
+                                        baseSongList.addAll(SongUtils.fillSongList(MainActivity.this, "COLLATE NOCASE ASC"));
+                                    }
+                                    songsListView.addAll(baseSongList);
+                                    SongUtils.alreadySorted = !SongUtils.alreadySorted;
                                     break;
                             }
                             listChanged = true;
