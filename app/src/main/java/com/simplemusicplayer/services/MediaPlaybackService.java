@@ -12,6 +12,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.AudioManager;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
@@ -26,6 +27,7 @@ import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
@@ -55,6 +57,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
     private MediaPlayer mMediaPlayer;
     private AudioManager audioManager;
     private MediaSessionCompat mMediaSessionCompat;
+    private Bitmap metadataCover;
     public static Song songToPlay;
     public static boolean isRunning = true;
     private static boolean isLoaded = false;
@@ -318,25 +321,41 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat implements M
     }
 
     private void initMediaSessionMetadata(Song song) {
-        final Song songToLoad = song;
 
-        Glide.with(MediaPlaybackService.this).asBitmap().load(songToLoad.getPath()).listener(new RequestListener<Bitmap>() {
-            @Override
-            public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Bitmap> target, boolean isFirstResource) {
-                //lock screen icon for pre lollipop
-                metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, null);
-                putMetadata(songToLoad);
-                return false;
-            }
+        if (metadataCover != null) {
+            metadataCover.recycle();
+        }
 
-            @Override
-            public boolean onResourceReady(Bitmap resource, Object model, Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
-                //lock screen icon for pre lollipop
-                metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, resource);
-                putMetadata(songToLoad);
-                return true;
+        MediaMetadataRetriever metaRetriever = new MediaMetadataRetriever();
+        metaRetriever.setDataSource(song.getPathToFile());
+        byte[] art = metaRetriever.getEmbeddedPicture();
+        if (art != null) {
+            BitmapFactory.Options opt = new BitmapFactory.Options();
+            opt.inJustDecodeBounds = true; //check size of image and don't decode it
+            BitmapFactory.decodeByteArray(art, 0, art.length, opt);
+            // assign values of image
+            int imageHeight = opt.outHeight;
+            int imageWidth = opt.outWidth;
+
+            //condition to determine max inSample size
+            if (imageHeight > 200 || imageWidth > 200) {
+                final int halfHeight = imageHeight / 2;
+                final int halfWidth = imageWidth / 2;
+                int inSampleSize = 1;
+                while ((halfHeight / inSampleSize) >= 200
+                        && (halfWidth / inSampleSize) >= 200) {
+                    inSampleSize *= 2;
+                }
+                opt.inSampleSize = inSampleSize;
             }
-        }).into(250, 250);
+            opt.inJustDecodeBounds = false;
+
+            metadataCover = BitmapFactory.decodeByteArray(art, 0, art.length, opt);
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, metadataCover);
+        } else {
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, null);
+        }
+        putMetadata(song);
     }
 
     private void putMetadata(Song songToSave) {
